@@ -1,0 +1,86 @@
+#include "emacsmodeshortcut.h"
+#include <QString>
+#include <QStringList>
+
+namespace EmacsMode
+{
+  Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> const & keys, TFnList const & fnList)
+    : m_mods(mods), m_keys(keys), m_fnList(fnList)
+  {}
+
+  Shortcut::Shortcut(char const * s)
+  {
+    QStringList l = QString::fromAscii(s).split(QString::fromLocal8Bit("|"));
+    QString keys = l.at(l.size() - 1).toLower();
+
+    for (int i = 0; i < l.size(); ++i)
+    {
+      QString key = l.at(i).toUpper();
+      if (key == QString::fromLocal8Bit("<CONTROL>"))
+        m_mods |= Qt::ControlModifier;
+      else if (key == QString::fromLocal8Bit("<META>"))
+        m_mods |= Qt::MetaModifier;
+      else if (key == QString::fromLocal8Bit("<SHIFT>"))
+        m_mods |= Qt::ShiftModifier;
+      else if (key == QString::fromLocal8Bit("<ALT>"))
+        m_mods |= Qt::AltModifier;
+      else if (key == QString::fromLocal8Bit("<TAB>"))
+        m_keys.push_back(Qt::Key_Tab);
+      else if (key == QString::fromLocal8Bit("<SPACE>"))
+        m_keys.push_back(Qt::Key_Space);
+      else if (key == QString::fromLocal8Bit("<UNDERSCORE>"))
+        m_keys.push_back(Qt::Key_Underscore);
+      else if (key == QString::fromLocal8Bit("<ESC>"))
+        m_keys.push_back(Qt::Key_Escape);
+      else if (key == QString::fromLocal8Bit("<SLASH>"))
+        m_keys.push_back(Qt::Key_Slash);
+      else
+        m_keys.push_back(key.at(0).toAscii() - 'A' + Qt::Key_A);
+    }
+  }
+
+  Shortcut::Shortcut()
+  {}
+
+
+  bool Shortcut::isEmpty() const
+  {
+    return m_keys.size() != 0;
+  }
+
+  bool Shortcut::isAccepted(QKeyEvent * kev) const
+  {
+    int key = kev->key();
+    Qt::KeyboardModifiers mods = kev->modifiers();
+    return ((mods == m_mods) && (key == m_keys.front()));
+  }
+
+  bool Shortcut::hasFollower(QKeyEvent * kev) const
+  {
+    return (isAccepted(kev) && (m_keys.size() > 1));
+  }
+
+  Shortcut const Shortcut::getFollower(QKeyEvent * kev) const
+  {
+    if (hasFollower(kev))
+    {
+      std::vector<int> keys;
+      std::copy(++m_keys.begin(), m_keys.end(), std::back_inserter(keys));
+      return Shortcut(m_mods, keys, m_fnList);
+    }
+    return Shortcut();
+  }
+
+  Shortcut & Shortcut::addFn(std::function<void()> fn)
+  {
+    m_fnList.push_back(fn);
+    return *this;
+  }
+
+  void Shortcut::exec() const
+  {
+    for (TFnList::const_iterator it = m_fnList.begin(); it != m_fnList.end(); ++it)
+      (*it)();
+  }
+
+}
