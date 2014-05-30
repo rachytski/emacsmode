@@ -1,14 +1,15 @@
 
 
-fakevim is based on eventFilters installed on a QTextEdit or a QPlainTextEdit.
+emacsmode is based on eventFilters installed on a QTextEdit or a QPlainTextEdit.
 It basically catches all keystrokes and modifies some internal state that
-make the resulting text in the editor look like it was using vim.
+make the resulting text in the editor look like it was using emacs.
 
 There are only a few files in here:
 
-  fakevimplugin.{h,cpp}  - interaction with the rest of Creator
-  fakevimactions.{h,cpp} - settings
-  fakevimhandler.{h,cpp} - the "real" event
+  emacsmodeplugin.{h,cpp}   - interaction with the rest of Creator
+  emacsmodeactions.{h,cpp}  - settings
+  emacsmodehandler.{h,cpp}  - the "real" event
+  emacsmodeshortcut.{h,cpp} - "chained" shortcuts.
 
-There are some more hints for developers in fakevimhandler.cpp
+There are some more hints for developers in emacsmodehandler.cpp
 
