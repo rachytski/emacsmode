@@ -40,6 +40,17 @@
 namespace EmacsMode {
 namespace Internal {
 
+// message levels sorted by severity
+enum MessageLevel
+{
+    MessageMode,    // show current mode (format "-- %1 --")
+    MessageCommand, // show last Ex command or search
+    MessageInfo,    // result of a command
+    MessageWarning, // warning
+    MessageError,   // error
+    MessageShowCmd  // partial command
+};
+
 enum RangeMode
 {
     // Reordering first three enum items here will break
@@ -75,25 +86,26 @@ public:
 
 public slots:
     void setCurrentFileName(const QString &fileName);
-//    void showBlackMessage(const QString &msg);
-//    void showRedMessage(const QString &msg);
+    void showMessage(MessageLevel level, QString const& msg);
+    void miniBufferTextEdited(const QString &text, int cursorPos, int anchorPos);
 
     void installEventFilter();
 
     // Convenience
-//    void setupWidget();
-//    void restoreWidget();
+    void setupWidget();
+    void restoreWidget(int tabSize);
 
 signals:
-    void commandBufferChanged(const QString &msg);
+    void commandBufferChanged(const QString &msg, int cursorPos,
+        int anchorPos, int messageLevel, QObject *eventFilter);
+
     void statusDataChanged(const QString &msg);
-    void extraInformationChanged(const QString &msg);
     void selectionChanged(const QList<QTextEdit::ExtraSelection> &selection);
     void writeFileRequested(bool *handled,
         const QString &fileName, const QString &contents);
     void writeAllRequested(QString *error);
     void moveToMatchingParenthesis(bool *moved, bool *forward, QTextCursor *cursor);
-    void indentRegion(int *amount, int beginLine, int endLine, QChar typedChar);
+    void indentRegion(int beginLine, int endLine, QChar typedChar);
     void completionRequested();
     void windowCommandRequested(int key);
     void findRequested(bool reverse);

@@ -53,27 +53,6 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QPushButton" name="pushButtonCopyTextEditorSettings">
-       <property name="text">
-        <string>Copy text editor settings</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSetQtStyle">
-       <property name="text">
-        <string>Set Qt style</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButtonSetPlainStyle">
-       <property name="text">
-        <string>Set plain style</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>

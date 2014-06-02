@@ -29,8 +29,10 @@
 
 #include "emacsmodeplugin.h"
 
+#include "emacsmodeminibuffer.h"
 #include "emacsmodeactions.h"
 #include "emacsmodehandler.h"
+#include "emacsmodeoptionpage.h"
 #include "ui_emacsmodeoptions.h"
 
 #include <coreplugin/actionmanager/actioncontainer.h>
@@ -111,13 +113,7 @@ using namespace Core;
 namespace EmacsMode {
 namespace Internal {
 
-const char INSTALL_HANDLER[]                = "TextEditor.EmacsModeHandler";
-const char SETTINGS_CATEGORY[]              = "D.EmacsMode";
-const char SETTINGS_CATEGORY_EMACSMODE_ICON[] = ":/core/images/category_fakevim.png";
-const char SETTINGS_ID[]                    = "A.General";
-const char SETTINGS_EX_CMDS_ID[]            = "B.ExCommands";
-const char SETTINGS_USER_CMDS_ID[]          = "C.UserCommands";
-typedef QLatin1String _;
+
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -127,60 +123,6 @@ typedef QLatin1String _;
 
 typedef QMap<QString, QRegExp> ExCommandMap;
 typedef QMap<int, QString> UserCommandMap;
-
-//const char *EMACSMODE_CONTEXT = "EmacsMode";
-
-class EmacsModeOptionPage : public IOptionsPage
-{
-    Q_OBJECT
-
-public:
-    EmacsModeOptionPage()
-    {
-        setId(SETTINGS_ID);
-        setDisplayName(tr("General"));
-        setCategory(SETTINGS_CATEGORY);
-        setDisplayCategory(tr("EmacsMode"));
-        setCategoryIcon(_(SETTINGS_CATEGORY_EMACSMODE_ICON));
-    }
-
-    QWidget *widget();
-    void apply();
-    void finish();
-
-private:
-    friend class DebuggerPlugin;
-    QPointer<QWidget> m_widget;
-    Ui::EmacsModeOptionPage m_ui;
-    Utils::SavedActionSet m_group;
-};
-
-QWidget *EmacsModeOptionPage::widget()
-{
-    if (!m_widget) {
-        m_widget = new QWidget;
-        m_ui.setupUi(m_widget);
-
-        m_group.clear();
-        m_group.insert(theEmacsModeSetting(ConfigUseEmacsMode),
-                       m_ui.checkBoxUseEmacsMode);
-    }
-    return m_widget;
-}
-
-void EmacsModeOptionPage::apply()
-{
-    m_group.apply(ICore::settings());
-}
-
-void EmacsModeOptionPage::finish()
-{
-    m_group.finish();
-    delete m_widget;
-}
-
-//const char *FAKEVIM_CONTEXT = "FakeVim";
-
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -212,6 +154,10 @@ private slots:
     void setUseEmacsModeInternal(bool on);
     void quitEmacsMode();
     void showSettingsDialog();
+
+    void resetCommandBuffer();
+    void showCommandBuffer(const QString &contents, int cursorPos, int anchorPos,
+                           int messageLevel, QObject *eventFilter);
 
     void indentRegion(int beginBlock, int endBlock, QChar typedChar);
 
@@ -305,7 +251,7 @@ bool EmacsModePluginPrivate::initialize()
 
     Command *cmd = 0;
     cmd = ActionManager::registerAction(theEmacsModeSetting(ConfigUseEmacsMode),
-        INSTALL_HANDLER, globalcontext, true);
+        EmacsModeOptionPage::INSTALL_HANDLER, globalcontext, true);
     cmd->setDefaultKeySequence(QKeySequence(UseMacShortcuts ? tr("Meta+V,Meta+V") : tr("Alt+V,Alt+V")));
 
     ActionContainer *advancedMenu =
@@ -416,7 +362,7 @@ void EmacsModePluginPrivate::readSettings()
 
 void EmacsModePluginPrivate::showSettingsDialog()
 {
-    ICore::showOptionsDialog(SETTINGS_CATEGORY, SETTINGS_ID);
+    ICore::showOptionsDialog(EmacsModeOptionPage::SETTINGS_CATEGORY, EmacsModeOptionPage::SETTINGS_ID);
 }
 
 void EmacsModePluginPrivate::triggerAction(const Id &id)
@@ -438,47 +384,6 @@ void EmacsModePluginPrivate::setActionChecked(const Id &id, bool check)
     action->setChecked(!check); // trigger negates the action's state
     action->trigger();
 }
-
-static int moveRightWeight(const QRect &cursor, const QRect &other)
-{
-    if (!cursor.adjusted(999999, 0, 0, 0).intersects(other))
-        return -1;
-    const int dx = other.left() - cursor.right();
-    const int dy = qAbs(cursor.center().y() - other.center().y());
-    const int w = 10000 * dx + dy;
-    return w;
-}
-
-static int moveLeftWeight(const QRect &cursor, const QRect &other)
-{
-    if (!cursor.adjusted(-999999, 0, 0, 0).intersects(other))
-        return -1;
-    const int dx = cursor.left() - other.right();
-    const int dy = qAbs(cursor.center().y() -other.center().y());
-    const int w = 10000 * dx + dy;
-    return w;
-}
-
-static int moveUpWeight(const QRect &cursor, const QRect &other)
-{
-    if (!cursor.adjusted(0, 0, 0, -999999).intersects(other))
-        return -1;
-    const int dy = cursor.top() - other.bottom();
-    const int dx = qAbs(cursor.center().x() - other.center().x());
-    const int w = 10000 * dy + dx;
-    return w;
-}
-
-static int moveDownWeight(const QRect &cursor, const QRect &other)
-{
-    if (!cursor.adjusted(0, 0, 0, 999999).intersects(other))
-        return -1;
-    const int dy = other.top() - cursor.bottom();
-    const int dx = qAbs(cursor.center().x() - other.center().x());
-    const int w = 10000 * dy + dx;
-    return w;
-}
-
 
 // This class defers deletion of a child EmacsModeHandler using deleteLater().
 class DeferredDeleter : public QObject
@@ -515,8 +420,8 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
     if (!qobject_cast<QTextEdit *>(widget) && !qobject_cast<QPlainTextEdit *>(widget))
         return;
 
-    //qDebug() << "OPENING: " << editor << editor->widget()
-    //    << "MODE: " << theEmacsModeSetting(ConfigUseEmacsMode)->value();
+    qDebug() << "OPENING: " << editor << editor->widget()
+        << "MODE: " << theEmacsModeSetting(ConfigUseEmacsMode)->value();
 
     EmacsModeHandler *handler = new EmacsModeHandler(widget, 0);
     // the handler might have triggered the deletion of the editor:
@@ -524,47 +429,10 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
     new DeferredDeleter(widget, handler);
     m_editorToHandler[editor] = handler;
 
-    connect(handler, SIGNAL(extraInformationChanged(QString)),
-        SLOT(showExtraInformation(QString)));
     connect(handler, SIGNAL(commandBufferChanged(QString,int,int,int,QObject*)),
         SLOT(showCommandBuffer(QString,int,int,int,QObject*)));
-    connect(handler, SIGNAL(selectionChanged(QList<QTextEdit::ExtraSelection>)),
-        SLOT(changeSelection(QList<QTextEdit::ExtraSelection>)));
-    connect(handler, SIGNAL(highlightMatches(QString)),
-        SLOT(highlightMatches(QString)));
-    connect(handler, SIGNAL(moveToMatchingParenthesis(bool*,bool*,QTextCursor*)),
-        SLOT(moveToMatchingParenthesis(bool*,bool*,QTextCursor*)));
     connect(handler, SIGNAL(indentRegion(int,int,QChar)),
         SLOT(indentRegion(int,int,QChar)));
-    connect(handler, SIGNAL(checkForElectricCharacter(bool*,QChar)),
-        SLOT(checkForElectricCharacter(bool*,QChar)));
-    connect(handler, SIGNAL(requestSetBlockSelection(bool)),
-        SLOT(setBlockSelection(bool)));
-    connect(handler, SIGNAL(requestHasBlockSelection(bool*)),
-        SLOT(hasBlockSelection(bool*)));
-    connect(handler, SIGNAL(completionRequested()),
-        SLOT(triggerCompletions()));
-    connect(handler, SIGNAL(simpleCompletionRequested(QString,bool)),
-        SLOT(triggerSimpleCompletions(QString,bool)));
-    connect(handler, SIGNAL(windowCommandRequested(QString,int)),
-        SLOT(windowCommand(QString,int)));
-    connect(handler, SIGNAL(findRequested(bool)),
-        SLOT(find(bool)));
-    connect(handler, SIGNAL(findNextRequested(bool)),
-        SLOT(findNext(bool)));
-    connect(handler, SIGNAL(foldToggle(int)),
-        SLOT(foldToggle(int)));
-    connect(handler, SIGNAL(foldAll(bool)),
-        SLOT(foldAll(bool)));
-    connect(handler, SIGNAL(fold(int,bool)),
-        SLOT(fold(int,bool)));
-    connect(handler, SIGNAL(foldGoTo(int,bool)),
-        SLOT(foldGoTo(int,bool)));
-    connect(handler, SIGNAL(jumpToGlobalMark(QChar,bool,QString)),
-        SLOT(jumpToGlobalMark(QChar,bool,QString)));
-
-    connect(handler, SIGNAL(handleExCommandRequested(bool*,ExCommand)),
-        SLOT(handleExCommand(bool*,ExCommand)));
 
     connect(ICore::instance(), SIGNAL(saveSettingsRequested()),
         SLOT(writeSettings()));
@@ -574,8 +442,8 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
 
     // pop up the bar
     if (theEmacsModeSetting(ConfigUseEmacsMode)->value().toBool()) {
-//       resetCommandBuffer();
-//       handler->setupWidget();
+       resetCommandBuffer();
+       handler->setupWidget();
     }
 }
 
@@ -593,8 +461,8 @@ void EmacsModePluginPrivate::setUseEmacsMode(const QVariant &value)
 void EmacsModePluginPrivate::setUseEmacsModeInternal(bool on)
 {
     if (on) {
-//        foreach (IEditor *editor, m_editorToHandler.keys())
-//            m_editorToHandler[editor]->setupWidget();
+        foreach (IEditor *editor, m_editorToHandler.keys())
+            m_editorToHandler[editor]->setupWidget();
     } else {
         //ICore *core = ICore::instance();
         //core->updateAdditionalContexts(Context(),
@@ -603,7 +471,7 @@ void EmacsModePluginPrivate::setUseEmacsModeInternal(bool on)
         foreach (IEditor *editor, m_editorToHandler.keys()) {
             if (BaseTextDocument *textDocument =
                     qobject_cast<BaseTextDocument *>(editor->document())) {
-                //m_editorToHandler[editor]->restoreWidget();
+                m_editorToHandler[editor]->restoreWidget(textDocument->tabSettings().m_tabSize);
             }
         }
     }
@@ -639,8 +507,10 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
     TabSettings tabSettings;
     tabSettings.m_indentSize = theEmacsModeSetting(ConfigShiftWidth)->value().toInt();
     tabSettings.m_tabSize = theEmacsModeSetting(ConfigTabStop)->value().toInt();
-    tabSettings.m_tabPolicy = theEmacsModeSetting(ConfigExpandTab)->value().toBool()
-            ? TabSettings::SpacesOnlyTabPolicy : TabSettings::TabsOnlyTabPolicy;
+    //tabSettings.m_tabPolicy = theEmacsModeSetting(ConfigExpandTab)->value().toBool()
+    //        ? TabSettings::SpacesOnlyTabPolicy : TabSettings::TabsOnlyTabPolicy;
+    tabSettings.m_tabPolicy = TabSettings::SpacesOnlyTabPolicy;
+
 
     QTextDocument *doc = bt->document();
     QTextBlock startBlock = doc->findBlockByNumber(beginBlock);
@@ -686,6 +556,19 @@ void EmacsModePluginPrivate::switchToFile(int n)
     EditorManager::activateEditorForEntry(EditorManager::documentModel()->documents().at(n));
 }
 
+void EmacsModePluginPrivate::resetCommandBuffer()
+{
+  showCommandBuffer(_(""), -1, -1, 0, 0);
+}
+
+void EmacsModePluginPrivate::showCommandBuffer(const QString &contents, int cursorPos, int anchorPos,
+                       int messageLevel, QObject *eventFilter)
+{
+  if (MiniBuffer *w = qobject_cast<MiniBuffer *>(m_statusBar->widget()))
+      w->setContents(contents, cursorPos, anchorPos, messageLevel, eventFilter);
+}
+
+
 ///////////////////////////////////////////////////////////////////////
 //
 // EmacsModePlugin
@@ -716,10 +599,10 @@ ExtensionSystem::IPlugin::ShutdownFlag EmacsModePlugin::aboutToShutdown()
 
 void EmacsModePlugin::extensionsInitialized()
 {
-/*    d->m_statusBar = new StatusBarWidget;
+    d->m_statusBar = new StatusBarWidget;
     d->m_statusBar->setWidget(new MiniBuffer);
     d->m_statusBar->setPosition(StatusBarWidget::LastLeftAligned);
-    addAutoReleasedObject(d->m_statusBar);*/
+    addAutoReleasedObject(d->m_statusBar);
 }
 
 } // namespace Internal

@@ -123,65 +123,14 @@ EmacsModeSettings *theEmacsModeSettings()
     instance->insertItem(ConfigUseEmacsMode, item);
 
     item = new SavedAction(instance);
-    item->setValue(false);
-    item->setDefaultValue(false);
-    item->setSettingsKey(group, QLatin1String("StartOfLine"));
-    item->setCheckable(true);
-    instance->insertItem(ConfigStartOfLine, item, QLatin1String("startofline"), QLatin1String("sol"));
-
-    item = new SavedAction(instance);
     item->setDefaultValue(8);
     item->setSettingsKey(group, QLatin1String("TabStop"));
     instance->insertItem(ConfigTabStop, item, QLatin1String("tabstop"), QLatin1String("ts"));
 
     item = new SavedAction(instance);
-    item->setDefaultValue(false);
-    item->setValue(false);
-    item->setSettingsKey(group, QLatin1String("SmartTab"));
-    instance->insertItem(ConfigSmartTab, item, QLatin1String("smarttab"), QLatin1String("sta"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(true);
-    item->setValue(true);
-    item->setSettingsKey(group, QLatin1String("HlSearch"));
-    item->setCheckable(true);
-    instance->insertItem(ConfigHlSearch, item, QLatin1String("hlsearch"), QLatin1String("hls"));
-
-    item = new SavedAction(instance);
     item->setDefaultValue(8);
     item->setSettingsKey(group, QLatin1String("ShiftWidth"));
     instance->insertItem(ConfigShiftWidth, item, QLatin1String("shiftwidth"), QLatin1String("sw"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(false);
-    item->setValue(false);
-    item->setSettingsKey(group, QLatin1String("ExpandTab"));
-    item->setCheckable(true);
-    instance->insertItem(ConfigExpandTab, item, QLatin1String("expandtab"), QLatin1String("et"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(false);
-    item->setValue(false);
-    item->setSettingsKey(group, QLatin1String("AutoIndent"));
-    item->setValue(false);
-    item->setCheckable(true);
-    instance->insertItem(ConfigAutoIndent, item, QLatin1String("autoindent"), QLatin1String("ai"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(true);
-    item->setValue(true);
-    item->setSettingsKey(group, QLatin1String("IncSearch"));
-    item->setCheckable(true);
-    instance->insertItem(ConfigIncSearch, item, QLatin1String("incsearch"), QLatin1String("is"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(QLatin1String("indent,eol,start"));
-    item->setSettingsKey(group, QLatin1String("Backspace"));
-    instance->insertItem(ConfigBackspace, item, QLatin1String("backspace"), QLatin1String("bs"));
-
-    item = new SavedAction(instance);
-    item->setText(QCoreApplication::translate("EmacsMode::Internal", "EmacsMode properties..."));
-    instance->insertItem(SettingsDialog, item);
 
     return instance;
 }
@@ -193,3 +142,4 @@ SavedAction *theEmacsModeSetting(int code)
 
 } // namespace Internal
 } // namespace EmacsMode
+

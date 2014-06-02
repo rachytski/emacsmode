@@ -16,14 +16,14 @@ namespace EmacsMode
     Qt::KeyboardModifiers m_mods;
     std::vector<int> m_keys;
 
-    typedef std::list<std::function<void()> > TFnList;
-    TFnList m_fnList;
+    typedef std::list<std::function<void()> > fn_list_t;
+    fn_list_t m_fnList;
 
   public:
 
     Shortcut();
     Shortcut(char const * s);
-    Shortcut(Qt::KeyboardModifiers, std::vector<int> const & , TFnList const & );
+    Shortcut(Qt::KeyboardModifiers, std::vector<int> const & , fn_list_t const & );
 
     Shortcut & addFn(std::function<void()> fn);
 

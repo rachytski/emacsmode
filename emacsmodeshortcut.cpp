@@ -4,7 +4,7 @@
 
 namespace EmacsMode
 {
-  Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> const & keys, TFnList const & fnList)
+  Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> const & keys, fn_list_t const & fnList)
     : m_mods(mods), m_keys(keys), m_fnList(fnList)
   {}
 
@@ -79,7 +79,7 @@ namespace EmacsMode
 
   void Shortcut::exec() const
   {
-    for (TFnList::const_iterator it = m_fnList.begin(); it != m_fnList.end(); ++it)
+    for (fn_list_t::const_iterator it = m_fnList.begin(); it != m_fnList.end(); ++it)
       (*it)();
   }
 

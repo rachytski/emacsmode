@@ -171,6 +171,8 @@ public:
     int cursorLineInDocument() const;
     int firstVisibleLineInDocument() const;
 
+    QTextBlock block() const { return m_tc.block(); }
+
     void indentRegion(QChar lastTyped = QChar());
 
     void moveToStartOfLine();
@@ -196,16 +198,20 @@ public:
     void moveToFirstNonBlankOnLine(QTextCursor *tc);
     void moveToNonBlankOnLine(QTextCursor *tc);
 
-//    void showRedMessage(const QString &msg);
-//    void showBlackMessage(const QString &msg);
+    void showMessage(MessageLevel level, const QString &msg);
     void notImplementedYet();
-//    void updateMiniBuffer();
+    void updateMiniBuffer();
 //    void updateSelection();
     QWidget *editor() const;
     void beginEditBlock() { m_tc.beginEditBlock(); }
     void beginEditBlock(int pos) { setUndoPosition(pos); beginEditBlock(); }
     void endEditBlock() { m_tc.endEditBlock(); }
     void joinPreviousEditBlock() { m_tc.joinPreviousEditBlock(); }
+    int cursorLine() const;
+    int physicalCursorColumn() const;
+
+    void setupWidget();
+    void restoreWidget(int tabSize);
 
 public:
     QTextEdit *m_textedit;
@@ -260,7 +266,26 @@ public:
 
     void commentOutRegion();
     void uncommentRegion();
+
+    void miniBufferTextEdited(const QString &text, int cursorPos, int anchorPos);
+
+    // Data shared among all editors.
+    static struct GlobalData
+    {
+        GlobalData()
+            : currentMessageLevel(MessageInfo)
+        {
+        }
+
+        // Current mini buffer message.
+        QString currentMessage;
+        MessageLevel currentMessageLevel;
+        QString currentCommand;
+    } g;
 };
+
+
+EmacsModeHandler::Private::GlobalData EmacsModeHandler::Private::g;
 
 
 EmacsModeHandler::Private::Private(EmacsModeHandler *parent, QWidget *widget)
@@ -269,6 +294,16 @@ EmacsModeHandler::Private::Private(EmacsModeHandler *parent, QWidget *widget)
     m_textedit = qobject_cast<QTextEdit *>(widget);
     m_plaintextedit = qobject_cast<QPlainTextEdit *>(widget);
     init();
+}
+
+void EmacsModeHandler::Private::setupWidget()
+{
+  updateMiniBuffer();
+}
+
+void EmacsModeHandler::Private::restoreWidget(int tabSize)
+{
+  EDITOR(setOverwriteMode(false));
 }
 
 void EmacsModeHandler::Private::init()
@@ -441,11 +476,13 @@ QString EmacsModeHandler::Private::selectText(const Range &range) const
         QTextCursor tc(document());
         int firstPos = firstPositionInLine(lineForPosition(range.beginPos));
         int lastLine = lineForPosition(range.endPos);
-        bool endOfDoc = lastLine == lineNumber(document()->lastBlock());
+        int lastDocumentLine = document()->blockCount();
+        bool endOfDoc = lastLine == lastDocumentLine;
         int lastPos = endOfDoc ? lastPositionInDocument() : firstPositionInLine(lastLine + 1);
         tc.setPosition(firstPos, MoveAnchor);
         tc.setPosition(lastPos, KeepAnchor);
-        return tc.selection().toPlainText() + QLatin1String(endOfDoc? "\n" : "");
+        QString contents = tc.selection().toPlainText();
+        return contents;// + QLatin1String(endOfDoc ? "\n" : "");
     }
     // FIXME: Performance?
     int beginLine = lineForPosition(range.beginPos);
@@ -495,29 +532,30 @@ void EmacsModeHandler::Private::saveToFile(QString const & fileName)
         emit q->writeFileRequested(&handled, fileName, contents);
         // nobody cared, so act ourselves
         if (!handled) {
-            //qDebug() << "HANDLING MANUAL SAVE TO " << fileName;
             QFile::remove(fileName);
             QFile file2(fileName);
             if (file2.open(QIODevice::ReadWrite)) {
-                QTextStream ts(&file2);
-                ts << contents;
+              QTextStream ts(&file2);
+              ts << contents;
+              ts.flush();
             } else {
- //               showRedMessage(EmacsModeHandler::tr
- //                  ("Cannot open file '%1' for writing").arg(fileName));
+              qDebug() << QString::fromAscii("Cannot open file '%1' for writing").arg(fileName);
+                showMessage(MessageError, EmacsModeHandler::tr
+                   ("Cannot open file '%1' for writing").arg(fileName));
             }
         }
         // check result by reading back
         QFile file3(fileName);
         file3.open(QIODevice::ReadOnly);
         QByteArray ba = file3.readAll();
- //       showBlackMessage(EmacsModeHandler::tr("\"%1\" %2 %3L, %4C written")
- //           .arg(fileName).arg(exists ? QString::fromAscii(" ") : QString::fromAscii(" [New] "))
- //           .arg(ba.count('\n')).arg(ba.size()));
+        showMessage(MessageInfo, EmacsModeHandler::tr("\"%1\" %2 %3L, %4C written")
+            .arg(fileName).arg(exists ? QString::fromAscii(" ") : QString::fromAscii(" [New] "))
+            .arg(ba.count('\n')).arg(ba.size()));
     }
     else
     {
-//        showRedMessage(EmacsModeHandler::tr
-//            ("Cannot open file '%1' for reading").arg(fileName));
+        showMessage(MessageError, EmacsModeHandler::tr
+            ("Cannot open file '%1' for reading").arg(fileName));
     }
 }
 
@@ -657,11 +695,66 @@ void EmacsModeHandler::Private::moveToStartOfLine()
     m_tc.movePosition(StartOfLine, m_moveMode);
 }
 
+void EmacsModeHandler::Private::updateMiniBuffer()
+{
+    if (!m_textedit && !m_plaintextedit)
+        return;
+
+    QString msg;
+    int cursorPos = -1;
+    int anchorPos = -1;
+    MessageLevel messageLevel = MessageMode;
+
+    if (!g.currentMessage.isEmpty()) {
+        msg = g.currentMessage;
+        g.currentMessage.clear();
+        messageLevel = g.currentMessageLevel;
+    }
+
+    emit q->commandBufferChanged(msg, cursorPos, anchorPos, messageLevel, q);
+
+    int linesInDoc = linesInDocument();
+    int l = cursorLine();
+    QString status;
+    const QString pos = QString::fromLatin1("%1,%2")
+        .arg(l + 1).arg(physicalCursorColumn() + 1);
+
+    if (linesInDoc != 0)
+        status = EmacsModeHandler::tr("%1%2%").arg(pos, -10).arg(l * 100 / linesInDoc, 4);
+    else
+        status = EmacsModeHandler::tr("%1All").arg(pos, -10);
+    emit q->statusDataChanged(status);
+}
+
+void EmacsModeHandler::Private::miniBufferTextEdited(const QString &text, int cursorPos,
+    int anchorPos)
+{
+  emit q->commandBufferChanged(text, cursorPos, anchorPos, 0, q);
+}
+
+int EmacsModeHandler::Private::cursorLine() const
+{
+    return lineForPosition(position()) - 1;
+}
+
+int EmacsModeHandler::Private::physicalCursorColumn() const
+{
+    return position() - block().position();
+}
+
+void EmacsModeHandler::Private::showMessage(MessageLevel level, const QString &msg)
+{
+    //qDebug() << "MSG: " << msg;
+    g.currentMessage = msg;
+    g.currentMessageLevel = level;
+    updateMiniBuffer();
+}
+
 void EmacsModeHandler::Private::notImplementedYet()
 {
     qDebug() << "Not implemented in EmacsMode";
-    //showRedMessage(EmacsModeHandler::tr("Not implemented in EmacsMode"));
-    //updateMiniBuffer();
+    showMessage(MessageError, EmacsModeHandler::tr("Not implemented in EmacsMode"));
+    updateMiniBuffer();
 }
 
 void EmacsModeHandler::Private::selectRange(int beginLine, int endLine)
@@ -687,11 +780,10 @@ void EmacsModeHandler::Private::indentRegion(QChar typedChar)
     if (beginLine > endLine)
         qSwap(beginLine, endLine);
 
-    int amount = 0;
-    emit q->indentRegion(&amount, beginLine, endLine, typedChar);
+    emit q->indentRegion(beginLine, endLine, typedChar);
 
     setPosition(firstPositionInLine(beginLine));
-//    moveToFirstNonBlankOnLine();
+    moveToFirstNonBlankOnLine();
 }
 
 int EmacsModeHandler::Private::cursorLineInDocument() const
@@ -755,10 +847,10 @@ void EmacsModeHandler::Private::undo()
     int current = m_tc.document()->availableUndoSteps();
     EDITOR(undo());
     int rev = m_tc.document()->availableUndoSteps();
-/*    if (current == rev)
-        showBlackMessage(EmacsModeHandler::tr("Already at oldest change"));
+    if (current == rev)
+        showMessage(MessageInfo, EmacsModeHandler::tr("Already at oldest change"));
     else
-        showBlackMessage(QString());*/
+        showMessage(MessageInfo, QString());
 
     if (m_undoCursorPosition.contains(rev))
         m_tc.setPosition(m_undoCursorPosition[rev]);
@@ -771,11 +863,11 @@ void EmacsModeHandler::Private::redo()
     EDITOR(redo());
     //beginEditBlock();
     int rev = m_tc.document()->availableUndoSteps();
-/*    if (rev == current)
-        showBlackMessage(EmacsModeHandler::tr("Already at newest change"));
+    if (rev == current)
+        showMessage(MessageInfo, EmacsModeHandler::tr("Already at newest change"));
     else
-        showBlackMessage(QString());
-*/
+        showMessage(MessageInfo, QString());
+
     if (m_undoCursorPosition.contains(rev))
         m_tc.setPosition(m_undoCursorPosition[rev]);
 }
@@ -822,21 +914,30 @@ void EmacsModeHandler::installEventFilter()
     d->installEventFilter();
 }
 
+void EmacsModeHandler::setupWidget()
+{
+    d->setupWidget();
+}
+
+void EmacsModeHandler::restoreWidget(int tabSize)
+{
+    d->restoreWidget(tabSize);
+}
+
 void EmacsModeHandler::setCurrentFileName(const QString &fileName)
 {
    d->m_currentFileName = fileName;
 }
-/*
-void EmacsModeHandler::showBlackMessage(const QString &msg)
+
+void EmacsModeHandler::showMessage(MessageLevel level, const QString &msg)
 {
-   d->showBlackMessage(msg);
+    d->showMessage(level, msg);
 }
 
-void EmacsModeHandler::showRedMessage(const QString &msg)
+void EmacsModeHandler::miniBufferTextEdited(QString const& text, int cursorPos, int anchorPos)
 {
-   d->showRedMessage(msg);
-}*/
-
+  d->miniBufferTextEdited(text, cursorPos, anchorPos);
+}
 
 QWidget *EmacsModeHandler::widget()
 {
