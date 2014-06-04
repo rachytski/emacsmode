@@ -38,21 +38,12 @@ class MiniBuffer : public QStackedWidget
 public:
     MiniBuffer();
 
-    void setContents(const QString &contents, int cursorPos, int anchorPos,
-                     int messageLevel, QObject *eventFilter);
+    void setContents(const QString &contents, int messageLevel);
 
     QSize sizeHint() const;
 
-signals:
-    void edited(const QString &text, int cursorPos, int anchorPos);
-
-private slots:
-    void changed();
-
 private:
     QLabel *m_label;
-    QLineEdit *m_edit;
-    QObject *m_eventFilter;
     QTimer m_hideTimer;
     int m_lastMessageLevel;
 };

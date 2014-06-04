@@ -146,8 +146,7 @@ private slots:
     void showSettingsDialog();
 
     void resetCommandBuffer();
-    void showCommandBuffer(const QString &contents, int cursorPos, int anchorPos,
-                           int messageLevel, QObject *eventFilter);
+    void showCommandBuffer(const QString &contents, int messageLevel);
 
     void indentRegion(int beginBlock, int endBlock, QChar typedChar);
 
@@ -548,14 +547,13 @@ void EmacsModePluginPrivate::switchToFile(int n)
 
 void EmacsModePluginPrivate::resetCommandBuffer()
 {
-  showCommandBuffer(_(""), -1, -1, 0, 0);
+  showCommandBuffer(_(""), 0);
 }
 
-void EmacsModePluginPrivate::showCommandBuffer(const QString &contents, int cursorPos, int anchorPos,
-                       int messageLevel, QObject *eventFilter)
+void EmacsModePluginPrivate::showCommandBuffer(QString const& contents, int messageLevel)
 {
   if (MiniBuffer *w = qobject_cast<MiniBuffer *>(m_statusBar->widget()))
-      w->setContents(contents, cursorPos, anchorPos, messageLevel, eventFilter);
+      w->setContents(contents, messageLevel);
 }
 
 

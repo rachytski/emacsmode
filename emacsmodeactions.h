@@ -63,5 +63,5 @@ Utils::SavedAction *theEmacsModeSetting(int code);
 } // namespace Internal
 } // namespace EmacsMode
 
-#endif // EmacsMode_ACTTIONS_H
+#endif // EMACSMODE_ACTTIONS_H
 

@@ -22,7 +22,6 @@
 
 #include "emacsmodeactions.h"
 #include "emacsmodeshortcut.h"
-#include <list>
 
 #include <QtCore/QObject>
 #include <QTextEdit>
@@ -33,8 +32,6 @@ namespace Internal {
 // message levels sorted by severity
 enum MessageLevel
 {
-    MessageMode,    // show current mode (format "-- %1 --")
-    MessageCommand, // show last Ex command or search
     MessageInfo,    // result of a command
     MessageWarning, // warning
     MessageError,   // error
@@ -45,9 +42,9 @@ enum RangeMode
 {
     // Reordering first three enum items here will break
     // compatibility with clipboard format stored by Vim.
-    RangeCharMode,         // v
-    RangeLineMode,         // V
-    RangeBlockMode,        // Ctrl-v
+    RangeCharMode,
+    RangeLineMode,
+    RangeBlockMode,
     RangeLineModeExclusive,
     RangeBlockAndTailMode // Ctrl-v for D and X
 };

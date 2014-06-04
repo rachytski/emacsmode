@@ -693,7 +693,7 @@ void EmacsModeHandler::Private::updateMiniBuffer()
     QString msg;
     int cursorPos = -1;
     int anchorPos = -1;
-    MessageLevel messageLevel = MessageMode;
+    MessageLevel messageLevel = MessageInfo;
 
     if (!g.currentMessage.isEmpty()) {
         msg = g.currentMessage;
