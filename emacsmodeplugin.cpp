@@ -99,17 +99,6 @@ using namespace Core;
 namespace EmacsMode {
 namespace Internal {
 
-
-
-///////////////////////////////////////////////////////////////////////
-//
-// OptionPage
-//
-///////////////////////////////////////////////////////////////////////
-
-typedef QMap<QString, QRegExp> ExCommandMap;
-typedef QMap<int, QString> UserCommandMap;
-
 ///////////////////////////////////////////////////////////////////////
 //
 // EmacsModePluginPrivate
@@ -167,16 +156,6 @@ private:
     void triggerAction(const Id &id);
     void setActionChecked(const Id &id, bool check);
 
-    ExCommandMap &exCommandMap() { return m_exCommandMap; }
-    ExCommandMap &defaultExCommandMap() { return m_defaultExCommandMap; }
-    ExCommandMap m_exCommandMap;
-    ExCommandMap m_defaultExCommandMap;
-
-    UserCommandMap &userCommandMap() { return m_userCommandMap; }
-    UserCommandMap &defaultUserCommandMap() { return m_defaultUserCommandMap; }
-    UserCommandMap m_userCommandMap;
-    UserCommandMap m_defaultUserCommandMap;
-
     StatusBarWidget *m_statusBar;
 };
 
@@ -184,24 +163,6 @@ EmacsModePluginPrivate::EmacsModePluginPrivate(EmacsModePlugin *plugin)
 {
     q = plugin;
     m_emacsModeOptionsPage = 0;
-    defaultExCommandMap()[_(CppTools::Constants::SWITCH_HEADER_SOURCE)] =
-        QRegExp(_("^A$"));
-    defaultExCommandMap()[_("Coreplugin.OutputPane.previtem")] =
-        QRegExp(_("^(cN(ext)?|cp(revious)?)!?( (.*))?$"));
-    defaultExCommandMap()[_("Coreplugin.OutputPane.nextitem")] =
-        QRegExp(_("^cn(ext)?!?( (.*))?$"));
-    defaultExCommandMap()[_(TextEditor::Constants::FOLLOW_SYMBOL_UNDER_CURSOR)] =
-        QRegExp(_("^tag?$"));
-    defaultExCommandMap()[_(Core::Constants::GO_BACK)] =
-        QRegExp(_("^pop?$"));
-    defaultExCommandMap()[_("QtCreator.Locate")] =
-        QRegExp(_("^e$"));
-
-    for (int i = 1; i < 10; ++i) {
-        QString cmd = QString::fromLatin1(":echo User command %1 executed.<CR>");
-        defaultUserCommandMap().insert(i, cmd.arg(i));
-    }
-
     m_statusBar = 0;
 }
 
@@ -263,85 +224,16 @@ bool EmacsModePluginPrivate::initialize()
     return true;
 }
 
-const char exCommandMapGroup[] = "EmacsModeExCommand";
-const char userCommandMapGroup[] = "EmacsModeUserCommand";
-const char reKey[] = "RegEx";
-const char cmdKey[] = "Cmd";
-const char idKey[] = "Command";
-
 void EmacsModePluginPrivate::writeSettings()
 {
     QSettings *settings = ICore::settings();
-
     theEmacsModeSettings()->writeSettings(settings);
-
-    { // block
-    settings->beginWriteArray(_(exCommandMapGroup));
-    int count = 0;
-    typedef ExCommandMap::const_iterator Iterator;
-    const Iterator end = exCommandMap().constEnd();
-    for (Iterator it = exCommandMap().constBegin(); it != end; ++it) {
-        const QString id = it.key();
-        const QRegExp re = it.value();
-
-        if ((defaultExCommandMap().contains(id) && defaultExCommandMap()[id] != re)
-            || (!defaultExCommandMap().contains(id) && !re.pattern().isEmpty())) {
-            settings->setArrayIndex(count);
-            settings->setValue(_(idKey), id);
-            settings->setValue(_(reKey), re.pattern());
-            ++count;
-        }
-    }
-    settings->endArray();
-    } // block
-
-    { // block
-    settings->beginWriteArray(_(userCommandMapGroup));
-    int count = 0;
-    typedef UserCommandMap::const_iterator Iterator;
-    const Iterator end = userCommandMap().constEnd();
-    for (Iterator it = userCommandMap().constBegin(); it != end; ++it) {
-        const int key = it.key();
-        const QString cmd = it.value();
-
-        if ((defaultUserCommandMap().contains(key)
-                && defaultUserCommandMap()[key] != cmd)
-            || (!defaultUserCommandMap().contains(key) && !cmd.isEmpty())) {
-            settings->setArrayIndex(count);
-            settings->setValue(_(idKey), key);
-            settings->setValue(_(cmdKey), cmd);
-            ++count;
-        }
-    }
-    settings->endArray();
-    } // block
 }
 
 void EmacsModePluginPrivate::readSettings()
 {
     QSettings *settings = ICore::settings();
-
     theEmacsModeSettings()->readSettings(settings);
-
-    exCommandMap() = defaultExCommandMap();
-    int size = settings->beginReadArray(_(exCommandMapGroup));
-    for (int i = 0; i < size; ++i) {
-        settings->setArrayIndex(i);
-        const QString id = settings->value(_(idKey)).toString();
-        const QString re = settings->value(_(reKey)).toString();
-        exCommandMap()[id] = QRegExp(re);
-    }
-    settings->endArray();
-
-    userCommandMap() = defaultUserCommandMap();
-    size = settings->beginReadArray(_(userCommandMapGroup));
-    for (int i = 0; i < size; ++i) {
-        settings->setArrayIndex(i);
-        const int id = settings->value(_(idKey)).toInt();
-        const QString cmd = settings->value(_(cmdKey)).toString();
-        userCommandMap()[id] = cmd;
-    }
-    settings->endArray();
 }
 
 

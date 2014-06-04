@@ -253,8 +253,6 @@ public:
     void commentOutRegion();
     void uncommentRegion();
 
-    void miniBufferTextEdited(const QString &text, int cursorPos, int anchorPos);
-
     // Data shared among all editors.
     static struct GlobalData
     {
@@ -687,8 +685,6 @@ void EmacsModeHandler::Private::updateMiniBuffer()
         return;
 
     QString msg;
-    int cursorPos = -1;
-    int anchorPos = -1;
     MessageLevel messageLevel = MessageInfo;
 
     if (!g.currentMessage.isEmpty()) {
@@ -697,25 +693,7 @@ void EmacsModeHandler::Private::updateMiniBuffer()
         messageLevel = g.currentMessageLevel;
     }
 
-    emit q->commandBufferChanged(msg, cursorPos, anchorPos, messageLevel, q);
-
-    int linesInDoc = linesInDocument();
-    int l = cursorLine();
-    QString status;
-    const QString pos = QString::fromLatin1("%1,%2")
-        .arg(l + 1).arg(physicalCursorColumn() + 1);
-
-    if (linesInDoc != 0)
-        status = EmacsModeHandler::tr("%1%2%").arg(pos, -10).arg(l * 100 / linesInDoc, 4);
-    else
-        status = EmacsModeHandler::tr("%1All").arg(pos, -10);
-    emit q->statusDataChanged(status);
-}
-
-void EmacsModeHandler::Private::miniBufferTextEdited(const QString &text, int cursorPos,
-    int anchorPos)
-{
-  emit q->commandBufferChanged(text, cursorPos, anchorPos, 0, q);
+    emit q->commandBufferChanged(msg, messageLevel);
 }
 
 int EmacsModeHandler::Private::cursorLine() const
@@ -918,11 +896,6 @@ void EmacsModeHandler::setCurrentFileName(const QString &fileName)
 void EmacsModeHandler::showMessage(MessageLevel level, const QString &msg)
 {
     d->showMessage(level, msg);
-}
-
-void EmacsModeHandler::miniBufferTextEdited(QString const& text, int cursorPos, int anchorPos)
-{
-  d->miniBufferTextEdited(text, cursorPos, anchorPos);
 }
 
 QWidget *EmacsModeHandler::widget()

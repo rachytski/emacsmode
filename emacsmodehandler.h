@@ -70,7 +70,6 @@ public:
 public slots:
     void setCurrentFileName(const QString &fileName);
     void showMessage(MessageLevel level, QString const& msg);
-    void miniBufferTextEdited(const QString &text, int cursorPos, int anchorPos);
 
     void installEventFilter();
 
@@ -79,21 +78,12 @@ public slots:
     void restoreWidget(int tabSize);
 
 signals:
-    void commandBufferChanged(const QString &msg, int cursorPos,
-        int anchorPos, int messageLevel, QObject *eventFilter);
+    void commandBufferChanged(const QString &msg, int messageLevel);
 
-    void statusDataChanged(const QString &msg);
-    void selectionChanged(const QList<QTextEdit::ExtraSelection> &selection);
     void writeFileRequested(bool *handled,
         const QString &fileName, const QString &contents);
     void writeAllRequested(QString *error);
-    void moveToMatchingParenthesis(bool *moved, bool *forward, QTextCursor *cursor);
     void indentRegion(int beginLine, int endLine, QChar typedChar);
-    void completionRequested();
-    void windowCommandRequested(int key);
-    void findRequested(bool reverse);
-    void findNextRequested(bool reverse);
-    void handleExCommandRequested(const QString &cmd);
 
 public:
     class Private;
