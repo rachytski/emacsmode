@@ -1,10 +1,6 @@
 /**************************************************************************
 **
-** Copyright (c) 2014 Siarhei Rachytski
-**
-** Contact: Siarhei Rachytski (siarhei.rachytski@gmail.com)
-**
-** Commercial Usage
+** Copyright (c) 2014 Siarhei Rachytski (siarhei.rachytski@gmail.com)
 **
 ** GNU Lesser General Public License Usage
 **
