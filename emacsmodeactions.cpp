@@ -102,21 +102,26 @@ EmacsModeSettings *theEmacsModeSettings()
 
     const QString group = QLatin1String("EmacsMode");
     item = new SavedAction(instance);
-    item->setText(QCoreApplication::translate("EmacsMode::Internal", "Toggle vim-style editing"));
+    item->setText(QCoreApplication::translate("EmacsMode::Internal", "Toggle Emacs-style editing"));
     item->setSettingsKey(group, QLatin1String("UseEmacsMode"));
     item->setCheckable(true);
     item->setValue(true);
     instance->insertItem(ConfigUseEmacsMode, item);
 
     item = new SavedAction(instance);
-    item->setDefaultValue(8);
+    item->setDefaultValue(4);
     item->setSettingsKey(group, QLatin1String("TabStop"));
     instance->insertItem(ConfigTabStop, item, QLatin1String("tabstop"), QLatin1String("ts"));
 
     item = new SavedAction(instance);
-    item->setDefaultValue(8);
+    item->setDefaultValue(4);
     item->setSettingsKey(group, QLatin1String("ShiftWidth"));
     instance->insertItem(ConfigShiftWidth, item, QLatin1String("shiftwidth"), QLatin1String("sw"));
+
+    item = new SavedAction(instance);
+    item->setDefaultValue(false);
+    item->setSettingsKey(group, QLatin1String("ExpandTabs"));
+    instance->insertItem(ConfigExpandTab, item, QLatin1String("expandtabs"), QLatin1String("et"));
 
     return instance;
 }

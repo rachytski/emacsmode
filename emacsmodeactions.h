@@ -27,9 +27,10 @@ namespace Internal {
 
 enum EmacsModeSettingsCode
 {
-    ConfigUseEmacsMode,
-    ConfigTabStop,
-    ConfigShiftWidth,
+  ConfigUseEmacsMode,
+  ConfigTabStop,
+  ConfigShiftWidth,
+  ConfigExpandTab
 };
 
 class EmacsModeSettings : public QObject

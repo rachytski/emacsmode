@@ -44,6 +44,15 @@ namespace Internal {
           m_group.clear();
           m_group.insert(theEmacsModeSetting(ConfigUseEmacsMode),
                          m_ui.checkBoxUseEmacsMode);
+
+          m_group.insert(theEmacsModeSetting(ConfigShiftWidth),
+                         m_ui.spinBoxShiftWidth);
+
+          m_group.insert(theEmacsModeSetting(ConfigTabStop),
+                         m_ui.spinBoxTabStop);
+
+          m_group.insert(theEmacsModeSetting(ConfigExpandTab),
+                         m_ui.checkBoxExpandTabs);
       }
       return m_widget;
   }

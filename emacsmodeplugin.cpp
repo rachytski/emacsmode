@@ -384,10 +384,8 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
     TabSettings tabSettings;
     tabSettings.m_indentSize = theEmacsModeSetting(ConfigShiftWidth)->value().toInt();
     tabSettings.m_tabSize = theEmacsModeSetting(ConfigTabStop)->value().toInt();
-    //tabSettings.m_tabPolicy = theEmacsModeSetting(ConfigExpandTab)->value().toBool()
-    //        ? TabSettings::SpacesOnlyTabPolicy : TabSettings::TabsOnlyTabPolicy;
-    tabSettings.m_tabPolicy = TabSettings::SpacesOnlyTabPolicy;
-
+    tabSettings.m_tabPolicy = theEmacsModeSetting(ConfigExpandTab)->value().toBool()
+            ? TabSettings::SpacesOnlyTabPolicy : TabSettings::TabsOnlyTabPolicy;
 
     QTextDocument *doc = bt->document();
     QTextBlock startBlock = doc->findBlockByNumber(beginBlock - 1);
