@@ -23,7 +23,7 @@ namespace Internal {
 
   const char * EmacsModeOptionPage::INSTALL_HANDLER                = "TextEditor.EmacsModeHandler";
   const char * EmacsModeOptionPage::SETTINGS_CATEGORY              = "D.EmacsMode";
-  const char * EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON = ":/core/images/category_fakevim.png";
+  const char * EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON = ":/emacsmode/category_icon.png";
   const char * EmacsModeOptionPage::SETTINGS_ID                    = "A.General";
 
   EmacsModeOptionPage::EmacsModeOptionPage()

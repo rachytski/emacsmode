@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/emacsmode">
+        <file>category_icon.png</file>
+    </qresource>
+</RCC>
