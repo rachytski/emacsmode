@@ -159,7 +159,8 @@ public:
 
     QTextBlock block() const { return m_tc.block(); }
 
-    void indentRegion(QChar lastTyped = QChar());
+    void indentRegion();
+    void indentRegionWithCharacter(QChar lastTyped);
 
     void moveToStartOfLine();
     void moveToEndOfLine();
@@ -183,6 +184,7 @@ public:
     void moveToFirstNonBlankOnLine();
     void moveToFirstNonBlankOnLine(QTextCursor *tc);
     void moveToNonBlankOnLine(QTextCursor *tc);
+    QChar const firstNonBlankOnLine(int line);
 
     void showMessage(MessageLevel level, const QString &msg);
     void notImplementedYet();
@@ -326,7 +328,7 @@ void EmacsModeHandler::Private::init()
                             .addFn(std::bind(&EmacsModeHandler::Private::undo, this))
                             .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
     m_shortcuts.push_back(EmacsMode::Shortcut("<TAB>")
-                            .addFn(std::bind(&EmacsModeHandler::Private::indentRegion, this, QChar::fromAscii('{')))
+                            .addFn(std::bind(&EmacsModeHandler::Private::indentRegion, this))
                             .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
     m_shortcuts.push_back(EmacsMode::Shortcut("<META>|<SPACE>")
                             .addFn(std::bind(&EmacsModeHandler::Private::anchorCurrentPos, this))
@@ -374,6 +376,18 @@ void EmacsModeHandler::Private::moveToNonBlankOnLine(QTextCursor *tc)
     while (doc->characterAt(i).isSpace() && i < maxPos)
         ++i;
     tc->setPosition(i, KeepAnchor);
+}
+
+QChar const EmacsModeHandler::Private::firstNonBlankOnLine(int line)
+{
+  QString const s = lineContents(line);
+  int i = 0;
+  while (i < s.size() && s.at(i).isSpace())
+    ++i;
+  if (i != s.size())
+    return s.at(i);
+  else
+    return QChar();
 }
 
 void EmacsModeHandler::Private::commentOutRegion()
@@ -481,7 +495,7 @@ QString EmacsModeHandler::Private::selectText(const Range &range) const
     }
     int len = endColumn - beginColumn + 1;
     QString contents;
-    QTextBlock block = document()->findBlockByLineNumber(beginLine - 1);
+    QTextBlock block = document()->findBlockByNumber(beginLine - 1);
     for (int i = beginLine; i <= endLine && block.isValid(); ++i) {
         QString line = block.text();
         if (range.rangemode == RangeBlockMode) {
@@ -736,7 +750,13 @@ void EmacsModeHandler::Private::selectRange(int beginLine, int endLine)
        setPosition(firstPositionInLine(endLine + 1));
 }
 
-void EmacsModeHandler::Private::indentRegion(QChar typedChar)
+void EmacsModeHandler::Private::indentRegion()
+{
+  int beginLine = lineForPosition(m_tc.anchor());
+  indentRegionWithCharacter(firstNonBlankOnLine(beginLine));
+}
+
+void EmacsModeHandler::Private::indentRegionWithCharacter(QChar typedChar)
 {
     //int savedPos = anchor();
     int beginLine = lineForPosition(m_tc.anchor());
@@ -745,9 +765,6 @@ void EmacsModeHandler::Private::indentRegion(QChar typedChar)
         qSwap(beginLine, endLine);
 
     emit q->indentRegion(beginLine, endLine, typedChar);
-
-    setPosition(firstPositionInLine(beginLine));
-    moveToFirstNonBlankOnLine();
 }
 
 int EmacsModeHandler::Private::cursorLineInDocument() const

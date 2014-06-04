@@ -306,8 +306,8 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
     new DeferredDeleter(widget, handler);
     m_editorToHandler[editor] = handler;
 
-    connect(handler, SIGNAL(commandBufferChanged(QString,int,int,int,QObject*)),
-        SLOT(showCommandBuffer(QString,int,int,int,QObject*)));
+    connect(handler, SIGNAL(commandBufferChanged(QString,int)),
+        SLOT(showCommandBuffer(QString, int)));
     connect(handler, SIGNAL(indentRegion(int,int,QChar)),
         SLOT(indentRegion(int,int,QChar)));
 
@@ -390,7 +390,7 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
 
 
     QTextDocument *doc = bt->document();
-    QTextBlock startBlock = doc->findBlockByNumber(beginBlock);
+    QTextBlock startBlock = doc->findBlockByNumber(beginBlock - 1);
 
     // Record line lenghts for mark adjustments
     QVector<int> lineLengths(endBlock - beginBlock + 1);
