@@ -1,15 +1,10 @@
+emacsmode is a plugin, based on a FakeVim plugin. 
 
+the following emacs commands are supported right now:
 
-emacsmode is based on eventFilters installed on a QTextEdit or a QPlainTextEdit.
-It basically catches all keystrokes and modifies some internal state that
-make the resulting text in the editor look like it was using emacs.
+cursor navigation commands: Ctrl-p, Ctrl-n, Ctrl-f, Ctrl-b, Ctrl-a, Ctrl-e
+line editing commands: Ctrl-k, Ctrl-y, Ctrl-d
+text block editing commands: Ctrl-w
+miscelaneous emacs commands: Ctrl-Space, Esc-Esc, Ctrl-_ (undo)
 
-There are only a few files in here:
-
-  emacsmodeplugin.{h,cpp}   - interaction with the rest of Creator
-  emacsmodeactions.{h,cpp}  - settings
-  emacsmodehandler.{h,cpp}  - the "real" event
-  emacsmodeshortcut.{h,cpp} - "chained" shortcuts.
-
-There are some more hints for developers in emacsmodehandler.cpp
-
+feel free to refactor and add your contributions.
