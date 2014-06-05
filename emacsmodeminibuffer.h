@@ -29,19 +29,19 @@ namespace Internal {
 
 class MiniBuffer : public QStackedWidget
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    MiniBuffer();
+  MiniBuffer();
 
-    void setContents(const QString &contents, int messageLevel);
+  void setContents(const QString &contents, int messageLevel);
 
-    QSize sizeHint() const;
+  QSize sizeHint() const;
 
 private:
-    QLabel *m_label;
-    QTimer m_hideTimer;
-    int m_lastMessageLevel;
+  QLabel *m_label;
+  QTimer m_hideTimer;
+  int m_lastMessageLevel;
 };
 
 }

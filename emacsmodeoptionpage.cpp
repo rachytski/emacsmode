@@ -21,52 +21,52 @@
 namespace EmacsMode {
 namespace Internal {
 
-  const char * EmacsModeOptionPage::INSTALL_HANDLER                = "TextEditor.EmacsModeHandler";
-  const char * EmacsModeOptionPage::SETTINGS_CATEGORY              = "D.EmacsMode";
-  const char * EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON = ":/emacsmode/category_icon.png";
-  const char * EmacsModeOptionPage::SETTINGS_ID                    = "A.General";
+const char * EmacsModeOptionPage::INSTALL_HANDLER                = "TextEditor.EmacsModeHandler";
+const char * EmacsModeOptionPage::SETTINGS_CATEGORY              = "D.EmacsMode";
+const char * EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON = ":/emacsmode/category_icon.png";
+const char * EmacsModeOptionPage::SETTINGS_ID                    = "A.General";
 
-  EmacsModeOptionPage::EmacsModeOptionPage()
-  {
-    setId(SETTINGS_ID);
-    setDisplayName(tr("General"));
-    setCategory(SETTINGS_CATEGORY);
-    setDisplayCategory(tr("EmacsMode"));
-    setCategoryIcon(_(SETTINGS_CATEGORY_EMACSMODE_ICON));
+EmacsModeOptionPage::EmacsModeOptionPage()
+{
+  setId(SETTINGS_ID);
+  setDisplayName(tr("General"));
+  setCategory(SETTINGS_CATEGORY);
+  setDisplayCategory(tr("EmacsMode"));
+  setCategoryIcon(_(SETTINGS_CATEGORY_EMACSMODE_ICON));
+}
+
+QWidget *EmacsModeOptionPage::widget()
+{
+  if (!m_widget) {
+    m_widget = new QWidget;
+    m_ui.setupUi(m_widget);
+
+    m_group.clear();
+    m_group.insert(theEmacsModeSetting(ConfigUseEmacsMode),
+                   m_ui.checkBoxUseEmacsMode);
+
+    m_group.insert(theEmacsModeSetting(ConfigShiftWidth),
+                   m_ui.spinBoxShiftWidth);
+
+    m_group.insert(theEmacsModeSetting(ConfigTabStop),
+                   m_ui.spinBoxTabStop);
+
+    m_group.insert(theEmacsModeSetting(ConfigExpandTab),
+                   m_ui.checkBoxExpandTabs);
   }
+  return m_widget;
+}
 
-  QWidget *EmacsModeOptionPage::widget()
-  {
-      if (!m_widget) {
-          m_widget = new QWidget;
-          m_ui.setupUi(m_widget);
+void EmacsModeOptionPage::apply()
+{
+  m_group.apply(ICore::settings());
+}
 
-          m_group.clear();
-          m_group.insert(theEmacsModeSetting(ConfigUseEmacsMode),
-                         m_ui.checkBoxUseEmacsMode);
-
-          m_group.insert(theEmacsModeSetting(ConfigShiftWidth),
-                         m_ui.spinBoxShiftWidth);
-
-          m_group.insert(theEmacsModeSetting(ConfigTabStop),
-                         m_ui.spinBoxTabStop);
-
-          m_group.insert(theEmacsModeSetting(ConfigExpandTab),
-                         m_ui.checkBoxExpandTabs);
-      }
-      return m_widget;
-  }
-
-  void EmacsModeOptionPage::apply()
-  {
-      m_group.apply(ICore::settings());
-  }
-
-  void EmacsModeOptionPage::finish()
-  {
-      m_group.finish();
-      delete m_widget;
-  }
+void EmacsModeOptionPage::finish()
+{
+  m_group.finish();
+  delete m_widget;
+}
 
 }
 }

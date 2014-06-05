@@ -36,22 +36,22 @@ enum EmacsModeSettingsCode
 class EmacsModeSettings : public QObject
 {
 public:
-    EmacsModeSettings();
-    ~EmacsModeSettings();
-    void insertItem(int code, Utils::SavedAction *item,
-        const QString &longname = QString(),
-        const QString &shortname = QString());
+  EmacsModeSettings();
+  ~EmacsModeSettings();
+  void insertItem(int code, Utils::SavedAction *item,
+                  const QString &longname = QString(),
+                  const QString &shortname = QString());
 
-    Utils::SavedAction *item(int code);
-    Utils::SavedAction *item(const QString &name);
+  Utils::SavedAction *item(int code);
+  Utils::SavedAction *item(const QString &name);
 
-    void readSettings(QSettings *settings);
-    void writeSettings(QSettings *settings);
+  void readSettings(QSettings *settings);
+  void writeSettings(QSettings *settings);
 
 private:
-    QHash<int, Utils::SavedAction *> m_items; 
-    QHash<QString, int> m_nameToCode; 
-    QHash<int, QString> m_codeToName; 
+  QHash<int, Utils::SavedAction *> m_items;
+  QHash<QString, int> m_nameToCode;
+  QHash<int, QString> m_codeToName;
 };
 
 EmacsModeSettings *theEmacsModeSettings();

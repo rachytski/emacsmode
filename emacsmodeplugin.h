@@ -27,22 +27,22 @@ class EmacsModePluginPrivate;
 
 class EmacsModePlugin : public ExtensionSystem::IPlugin
 {
-    Q_OBJECT
-    Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QtCreatorPlugin" FILE "EmacsMode.json")
+  Q_OBJECT
+  Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QtCreatorPlugin" FILE "EmacsMode.json")
 
 public:
-    EmacsModePlugin();
-    ~EmacsModePlugin();
+  EmacsModePlugin();
+  ~EmacsModePlugin();
 
 private:
-    // implementation of ExtensionSystem::IPlugin
-    bool initialize(const QStringList &arguments, QString *errorMessage);
-    ShutdownFlag aboutToShutdown();
-    void extensionsInitialized();
+  // implementation of ExtensionSystem::IPlugin
+  bool initialize(const QStringList &arguments, QString *errorMessage);
+  ShutdownFlag aboutToShutdown();
+  void extensionsInitialized();
 
 private:
-    friend class EmacsModePluginPrivate;
-    EmacsModePluginPrivate *d;
+  friend class EmacsModePluginPrivate;
+  EmacsModePluginPrivate *d;
 };
 
 } // namespace Internal

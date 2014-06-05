@@ -50,85 +50,85 @@ EmacsModeSettings::EmacsModeSettings()
 
 EmacsModeSettings::~EmacsModeSettings()
 {
-    qDeleteAll(m_items);
+  qDeleteAll(m_items);
 }
-    
+
 void EmacsModeSettings::insertItem(int code, SavedAction *item,
-    const QString &longName, const QString &shortName)
+                                   const QString &longName, const QString &shortName)
 {
-    QTC_ASSERT(!m_items.contains(code), qDebug() << code << item->toString(); return);
-    m_items[code] = item;
-    if (!longName.isEmpty()) {
-        m_nameToCode[longName] = code;
-        m_codeToName[code] = longName;
-    }
-    if (!shortName.isEmpty()) {
-        m_nameToCode[shortName] = code;
-    }
+  QTC_ASSERT(!m_items.contains(code), qDebug() << code << item->toString(); return);
+  m_items[code] = item;
+  if (!longName.isEmpty()) {
+    m_nameToCode[longName] = code;
+    m_codeToName[code] = longName;
+  }
+  if (!shortName.isEmpty()) {
+    m_nameToCode[shortName] = code;
+  }
 }
 
 void EmacsModeSettings::readSettings(QSettings *settings)
 {
-    foreach (SavedAction *item, m_items)
-        item->readSettings(settings);
+  foreach (SavedAction *item, m_items)
+    item->readSettings(settings);
 }
 
 void EmacsModeSettings::writeSettings(QSettings *settings)
 {
-    foreach (SavedAction *item, m_items)
-        item->writeSettings(settings);
+  foreach (SavedAction *item, m_items)
+    item->writeSettings(settings);
 }
-   
+
 SavedAction *EmacsModeSettings::item(int code)
 {
-    QTC_ASSERT(m_items.value(code, 0), qDebug() << "CODE: " << code; return 0);
-    return m_items.value(code, 0);
+  QTC_ASSERT(m_items.value(code, 0), qDebug() << "CODE: " << code; return 0);
+  return m_items.value(code, 0);
 }
 
 SavedAction *EmacsModeSettings::item(const QString &name)
 {
-    return m_items.value(m_nameToCode.value(name, -1), 0);
+  return m_items.value(m_nameToCode.value(name, -1), 0);
 }
 
 EmacsModeSettings *theEmacsModeSettings()
 {
-    static EmacsModeSettings *instance = 0;
-    if (instance)
-        return instance;
-
-    instance = new EmacsModeSettings;
-
-    SavedAction *item = 0;
-
-    const QString group = QLatin1String("EmacsMode");
-    item = new SavedAction(instance);
-    item->setText(QCoreApplication::translate("EmacsMode::Internal", "Toggle Emacs-style editing"));
-    item->setSettingsKey(group, QLatin1String("UseEmacsMode"));
-    item->setCheckable(true);
-    item->setValue(true);
-    instance->insertItem(ConfigUseEmacsMode, item);
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(4);
-    item->setSettingsKey(group, QLatin1String("TabStop"));
-    instance->insertItem(ConfigTabStop, item, QLatin1String("tabstop"), QLatin1String("ts"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(4);
-    item->setSettingsKey(group, QLatin1String("ShiftWidth"));
-    instance->insertItem(ConfigShiftWidth, item, QLatin1String("shiftwidth"), QLatin1String("sw"));
-
-    item = new SavedAction(instance);
-    item->setDefaultValue(false);
-    item->setSettingsKey(group, QLatin1String("ExpandTabs"));
-    instance->insertItem(ConfigExpandTab, item, QLatin1String("expandtabs"), QLatin1String("et"));
-
+  static EmacsModeSettings *instance = 0;
+  if (instance)
     return instance;
+
+  instance = new EmacsModeSettings;
+
+  SavedAction *item = 0;
+
+  const QString group = QLatin1String("EmacsMode");
+  item = new SavedAction(instance);
+  item->setText(QCoreApplication::translate("EmacsMode::Internal", "Toggle Emacs-style editing"));
+  item->setSettingsKey(group, QLatin1String("UseEmacsMode"));
+  item->setCheckable(true);
+  item->setValue(true);
+  instance->insertItem(ConfigUseEmacsMode, item);
+
+  item = new SavedAction(instance);
+  item->setDefaultValue(4);
+  item->setSettingsKey(group, QLatin1String("TabStop"));
+  instance->insertItem(ConfigTabStop, item, QLatin1String("tabstop"), QLatin1String("ts"));
+
+  item = new SavedAction(instance);
+  item->setDefaultValue(4);
+  item->setSettingsKey(group, QLatin1String("ShiftWidth"));
+  instance->insertItem(ConfigShiftWidth, item, QLatin1String("shiftwidth"), QLatin1String("sw"));
+
+  item = new SavedAction(instance);
+  item->setDefaultValue(false);
+  item->setSettingsKey(group, QLatin1String("ExpandTabs"));
+  instance->insertItem(ConfigExpandTab, item, QLatin1String("expandtabs"), QLatin1String("et"));
+
+  return instance;
 }
 
 SavedAction *theEmacsModeSetting(int code)
 {
-    return theEmacsModeSettings()->item(code);
+  return theEmacsModeSettings()->item(code);
 }
 
 } // namespace Internal

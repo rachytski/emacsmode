@@ -28,70 +28,73 @@ namespace Internal {
 // message levels sorted by severity
 enum MessageLevel
 {
-    MessageInfo,    // result of a command
-    MessageWarning, // warning
-    MessageError,   // error
-    MessageShowCmd  // partial command
+  MessageInfo,    // result of a command
+  MessageWarning, // warning
+  MessageError,   // error
+  MessageShowCmd  // partial command
 };
 
 enum RangeMode
 {
-    // Reordering first three enum items here will break
-    // compatibility with clipboard format stored by Vim.
-    RangeCharMode,
-    RangeLineMode,
-    RangeBlockMode,
-    RangeLineModeExclusive,
-    RangeBlockAndTailMode // Ctrl-v for D and X
+  // Reordering first three enum items here will break
+  // compatibility with clipboard format stored by Vim.
+  RangeCharMode,
+  RangeLineMode,
+  RangeBlockMode,
+  RangeLineModeExclusive,
+  RangeBlockAndTailMode // Ctrl-v for D and X
 };
 
 struct Range
 {
-    Range();
-    Range(int b, int e, RangeMode m = RangeCharMode);
-    QString toString() const;
-    bool isValid() const;
+  Range();
+  Range(int b, int e, RangeMode m = RangeCharMode);
+  QString toString() const;
+  bool isValid() const;
 
-    int beginPos;
-    int endPos;
-    RangeMode rangemode;
+  int beginPos;
+  int endPos;
+  RangeMode rangemode;
 };
 
 class EmacsModeHandler : public QObject
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    EmacsModeHandler(QWidget *widget, QObject *parent = 0);
-    ~EmacsModeHandler();
+  EmacsModeHandler(QWidget *widget, QObject *parent = 0);
+  ~EmacsModeHandler();
 
-    QWidget *widget();
+  QWidget *widget();
 
 public slots:
-    void setCurrentFileName(const QString &fileName);
-    void showMessage(MessageLevel level, QString const& msg);
+  void setCurrentFileName(const QString &fileName);
+  void showMessage(MessageLevel level, QString const& msg);
 
-    void installEventFilter();
+  void onContentsChanged(int position, int charsRemoved, int charsAdded);
+  void onUndoCommandAdded();
 
-    // Convenience
-    void setupWidget();
-    void restoreWidget(int tabSize);
+  void installEventFilter();
+
+  // Convenience
+  void setupWidget();
+  void restoreWidget(int tabSize);
 
 signals:
-    void commandBufferChanged(const QString &msg, int messageLevel);
+  void commandBufferChanged(const QString &msg, int messageLevel);
 
-    void writeFileRequested(bool *handled,
-        const QString &fileName, const QString &contents);
-    void writeAllRequested(QString *error);
-    void indentRegion(int beginLine, int endLine, QChar typedChar);
+  void writeFileRequested(bool *handled,
+                          const QString &fileName, const QString &contents);
+  void writeAllRequested(QString *error);
+  void indentRegion(int beginLine, int endLine, QChar typedChar);
 
 public:
-    class Private;
+  class Private;
 
 private:
-    bool eventFilter(QObject *ob, QEvent *ev);
+  bool eventFilter(QObject *ob, QEvent *ev);
 
-    Private *d;
+  Private *d;
 };
 
 } // namespace Internal

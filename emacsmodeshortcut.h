@@ -24,31 +24,31 @@
 
 namespace EmacsMode
 {
-  class Shortcut
-  {
-  private:
+class Shortcut
+{
+private:
 
-    Qt::KeyboardModifiers m_mods;
-    std::vector<int> m_keys;
+  Qt::KeyboardModifiers m_mods;
+  std::vector<int> m_keys;
 
-    typedef std::list<std::function<void()> > fn_list_t;
-    fn_list_t m_fnList;
+  typedef std::list<std::function<void()> > fn_list_t;
+  fn_list_t m_fnList;
 
-  public:
+public:
 
-    Shortcut();
-    Shortcut(char const * s);
-    Shortcut(Qt::KeyboardModifiers, std::vector<int> const & , fn_list_t const & );
+  Shortcut();
+  Shortcut(char const * s);
+  Shortcut(Qt::KeyboardModifiers, std::vector<int> const & , fn_list_t const & );
 
-    Shortcut & addFn(std::function<void()> fn);
+  Shortcut & addFn(std::function<void()> fn);
 
-    void exec() const;
+  void exec() const;
 
-    bool isEmpty() const;
-    bool isAccepted(QKeyEvent * kev) const;
-    bool hasFollower(QKeyEvent * kev) const;
-    Shortcut const getFollower(QKeyEvent * kev) const;
-  };
+  bool isEmpty() const;
+  bool isAccepted(QKeyEvent * kev) const;
+  bool hasFollower(QKeyEvent * kev) const;
+  Shortcut const getFollower(QKeyEvent * kev) const;
+};
 }
 
 #endif // EMACS_SHORTCUT_H
