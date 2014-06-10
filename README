@@ -1,4 +1,4 @@
-emacsmode is a plugin, based on a FakeVim plugin. 
+emacsmode is a Qt Creator plugin, based on a FakeVim plugin. 
 
 the following emacs commands are supported right now:
 
