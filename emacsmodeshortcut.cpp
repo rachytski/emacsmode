@@ -25,7 +25,7 @@ Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> const & keys, fn
 
 Shortcut::Shortcut(char const * s)
 {
-  QStringList l = QString::fromAscii(s).split(QString::fromLocal8Bit("|"));
+  QStringList l = QString::fromLatin1(s).split(QString::fromLocal8Bit("|"));
   QString keys = l.at(l.size() - 1).toLower();
 
   for (int i = 0; i < l.size(); ++i)
@@ -34,7 +34,13 @@ Shortcut::Shortcut(char const * s)
     if (key == QString::fromLocal8Bit("<CONTROL>"))
       m_mods |= Qt::ControlModifier;
     else if (key == QString::fromLocal8Bit("<META>"))
+    {
+#ifdef _WIN32
+      m_mods |= Qt::ControlModifier;
+#else
       m_mods |= Qt::MetaModifier;
+#endif
+    }
     else if (key == QString::fromLocal8Bit("<SHIFT>"))
       m_mods |= Qt::ShiftModifier;
     else if (key == QString::fromLocal8Bit("<ALT>"))
@@ -50,7 +56,7 @@ Shortcut::Shortcut(char const * s)
     else if (key == QString::fromLocal8Bit("<SLASH>"))
       m_keys.push_back(Qt::Key_Slash);
     else
-      m_keys.push_back(key.at(0).toAscii() - 'A' + Qt::Key_A);
+      m_keys.push_back(key.at(0).toLatin1() - 'A' + Qt::Key_A);
   }
 }
 

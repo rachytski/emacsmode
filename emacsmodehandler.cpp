@@ -169,8 +169,8 @@ public:
   void moveLeft(int n = 1) { m_tc.movePosition(Left, m_moveMode, n); }
   void newLine(){m_tc.insertBlock();}
   void backspace(){m_tc.deletePreviousChar();}
-  void insertBackSlash(){m_tc.insertText(QString::fromAscii("\\"));}
-  void insertStraightDelim(){m_tc.insertText(QString::fromAscii("|"));}
+  void insertBackSlash(){m_tc.insertText(QString::fromLatin1("\\"));}
+  void insertStraightDelim(){m_tc.insertText(QString::fromLatin1("|"));}
   void setAnchor(int position) { m_anchor = position; }
   void setPosition(int position) { m_tc.setPosition(position, MoveAnchor); }
 
@@ -228,7 +228,7 @@ public:
   QVariant config(int code) const { return theEmacsModeSetting(code)->value(); }
   bool hasConfig(int code) const { return config(code).toBool(); }
   bool hasConfig(int code, const char *value) const // FIXME
-  { return config(code).toString().contains(QString::fromAscii(value)); }
+  { return config(code).toString().contains(QString::fromLatin1(value)); }
 
   typedef std::list<EmacsMode::Shortcut> TShortcutList;
   TShortcutList m_shortcuts;
@@ -243,6 +243,7 @@ public:
 
   void cleanKillBuffer();
   void killLine();
+  void killSymbol();
 
   void yank();
 
@@ -374,6 +375,7 @@ void EmacsModeHandler::Private::init()
                         .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
   //    m_shortcuts.push_back(Emacs::Shortcut("<ALT>|w").addFn(std::bind(&EmacsModeHandler::Private::copySelected, this)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|k").addFn(std::bind(&EmacsModeHandler::Private::killLine, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|d").addFn(std::bind(&EmacsModeHandler::Private::killSymbol, this)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|y").addFn(std::bind(&EmacsModeHandler::Private::yank, this)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|x|s").addFn(std::bind(&EmacsModeHandler::Private::saveCurrentFile, this)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|i|c").addFn(std::bind(&EmacsModeHandler::Private::commentOutRegion, this)));
@@ -440,7 +442,7 @@ void EmacsModeHandler::Private::commentOutRegion()
 
   for (int line = beginLine; line <= endLine; ++line) {
     setPosition(firstPositionInLine(line));
-    m_tc.insertText(QString::fromAscii("//"));
+    m_tc.insertText(QString::fromLatin1("//"));
   }
   endEditBlock();
 
@@ -566,7 +568,7 @@ void EmacsModeHandler::Private::saveToFile(QString const & fileName)
         ts << contents;
         ts.flush();
       } else {
-        qDebug() << QString::fromAscii("Cannot open file '%1' for writing").arg(fileName);
+        qDebug() << QString::fromLatin1("Cannot open file '%1' for writing").arg(fileName);
         showMessage(MessageError, EmacsModeHandler::tr
                     ("Cannot open file '%1' for writing").arg(fileName));
       }
@@ -576,7 +578,7 @@ void EmacsModeHandler::Private::saveToFile(QString const & fileName)
     file3.open(QIODevice::ReadOnly);
     QByteArray ba = file3.readAll();
     showMessage(MessageInfo, EmacsModeHandler::tr("\"%1\" %2 %3L, %4C written")
-                .arg(fileName).arg(exists ? QString::fromAscii(" ") : QString::fromAscii(" [New] "))
+                .arg(fileName).arg(exists ? QString::fromLatin1(" ") : QString::fromLatin1(" [New] "))
                 .arg(ba.count('\n')).arg(ba.size()));
   }
   else
@@ -614,6 +616,19 @@ void EmacsModeHandler::Private::killSelected()
   setMoveMode(MoveAnchor);
 }
 
+void EmacsModeHandler::Private::killSymbol()
+{
+  if (!m_isAppendingKillBuffer)
+    m_killBuffer.clear();
+  m_isAppendingKillBuffer = true;
+
+  m_tc.setPosition(m_tc.position(), MoveAnchor);
+  m_tc.movePosition(QTextCursor::NextCharacter, KeepAnchor);
+  m_killBuffer.append(m_tc.selectedText());
+
+  m_tc.removeSelectedText();
+}
+
 void EmacsModeHandler::Private::cleanKillBuffer()
 {
   m_killBuffer.clear();
@@ -621,7 +636,7 @@ void EmacsModeHandler::Private::cleanKillBuffer()
 
 void EmacsModeHandler::Private::yank()
 {
-  m_tc.insertText(m_killBuffer.join(QString::fromAscii("")));
+  m_tc.insertText(m_killBuffer.join(QString::fromLatin1("")));
 }
 
 void EmacsModeHandler::Private::killLine()

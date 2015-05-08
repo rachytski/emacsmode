@@ -17,7 +17,10 @@ HEADERS += emacsmodehandler.h \
     emacsmodeoptionpage.h
 
 FORMS += emacsmodeoptions.ui
-QMAKE_CXXFLAGS = -mmacosx-version-min=10.7 -std=gnu0x -stdlib=libc+
+
+!win* {
+    QMAKE_CXXFLAGS = -mmacosx-version-min=10.7 -std=gnu0x -stdlib=libc+
+}
 
 CONFIG +=c++11
 

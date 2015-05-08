@@ -42,27 +42,26 @@
 
 #include <projectexplorer/projectexplorerconstants.h>
 
-#include <texteditor/basetextdocumentlayout.h>
-#include <texteditor/basetexteditor.h>
-#include <texteditor/basetextmark.h>
+#include <texteditor/textdocumentlayout.h>
+#include <texteditor/texteditor.h>
+#include <texteditor/textmark.h>
 #include <texteditor/texteditorconstants.h>
 #include <texteditor/typingsettings.h>
 #include <texteditor/tabsettings.h>
 #include <texteditor/icodestylepreferences.h>
 #include <texteditor/texteditorsettings.h>
 #include <texteditor/indenter.h>
-#include <texteditor/codeassist/basicproposalitem.h>
-#include <texteditor/codeassist/basicproposalitemlistmodel.h>
+#include <texteditor/codeassist/assistproposalitem.h>
+#include <texteditor/codeassist/genericproposalmodel.h>
 #include <texteditor/codeassist/completionassistprovider.h>
 #include <texteditor/codeassist/iassistprocessor.h>
-#include <texteditor/codeassist/iassistinterface.h>
+#include <texteditor/codeassist/assistinterface.h>
 #include <texteditor/codeassist/genericproposal.h>
 
 #include <utils/fancylineedit.h>
 #include <utils/hostosinfo.h>
 #include <utils/qtcassert.h>
 #include <utils/pathchooser.h>
-#include <utils/qtcoverride.h>
 #include <utils/savedaction.h>
 #include <utils/stylehelper.h>
 
@@ -128,7 +127,7 @@ private slots:
   void setUseEmacsMode(const QVariant &value);
   void setUseEmacsModeInternal(bool on);
   void quitEmacsMode();
-  void showSettingsDialog();
+  //void showSettingsDialog();
 
   void resetCommandBuffer();
   void showCommandBuffer(const QString &contents, int messageLevel);
@@ -237,10 +236,10 @@ void EmacsModePluginPrivate::readSettings()
 }
 
 
-void EmacsModePluginPrivate::showSettingsDialog()
+/*void EmacsModePluginPrivate::showSettingsDialog()
 {
   ICore::showOptionsDialog(EmacsModeOptionPage::SETTINGS_CATEGORY, EmacsModeOptionPage::SETTINGS_ID);
-}
+}*/
 
 void EmacsModePluginPrivate::triggerAction(const Id &id)
 {
@@ -314,7 +313,7 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
   connect(ICore::instance(), SIGNAL(saveSettingsRequested()),
           SLOT(writeSettings()));
 
-  handler->setCurrentFileName(editor->document()->filePath());
+  handler->setCurrentFileName(editor->document()->filePath().toString());
   handler->installEventFilter();
 
   // pop up the bar
@@ -346,8 +345,8 @@ void EmacsModePluginPrivate::setUseEmacsModeInternal(bool on)
     // Context(EmacsMode_CONTEXT));
     //        resetCommandBuffer();
     foreach (IEditor *editor, m_editorToHandler.keys()) {
-      if (BaseTextDocument *textDocument =
-          qobject_cast<BaseTextDocument *>(editor->document())) {
+      if (TextDocument *textDocument =
+          qobject_cast<TextDocument *>(editor->document())) {
         m_editorToHandler[editor]->restoreWidget(textDocument->tabSettings().m_tabSize);
       }
     }
@@ -377,7 +376,7 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
   if (!handler)
     return;
 
-  BaseTextEditorWidget *bt = qobject_cast<BaseTextEditorWidget *>(handler->widget());
+  TextEditorWidget *bt = qobject_cast<TextEditorWidget *>(handler->widget());
   if (!bt)
     return;
 
@@ -402,7 +401,7 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
       while (!cursor.atBlockEnd())
         cursor.deleteChar();
     } else {
-      bt->baseTextDocument()->indenter()->indentBlock(doc, block, typedChar, tabSettings);
+      bt->textDocument()->indenter()->indentBlock(doc, block, typedChar, tabSettings);
     }
     block = block.next();
   }
@@ -418,17 +417,17 @@ int EmacsModePluginPrivate::currentFile() const
   IEditor *editor = EditorManager::currentEditor();
   if (!editor)
     return -1;
-  return EditorManager::documentModel()->indexOfDocument(editor->document());
+  return DocumentModel::indexOfDocument(editor->document());
 }
 
 void EmacsModePluginPrivate::switchToFile(int n)
 {
-  int size = EditorManager::documentModel()->documentCount();
+  int size = DocumentModel::entryCount();
   QTC_ASSERT(size, return);
   n = n % size;
   if (n < 0)
     n += size;
-  EditorManager::activateEditorForEntry(EditorManager::documentModel()->documents().at(n));
+  EditorManager::activateEditorForEntry(DocumentModel::entries().at(n));
 }
 
 void EmacsModePluginPrivate::resetCommandBuffer()
@@ -484,4 +483,4 @@ void EmacsModePlugin::extensionsInitialized()
 
 #include "emacsmodeplugin.moc"
 
-Q_EXPORT_PLUGIN(EmacsMode::Internal::EmacsModePlugin)
+//Q_EXPORT_PLUGIN2(EmacsMode::Internal::EmacsModePlugin)
