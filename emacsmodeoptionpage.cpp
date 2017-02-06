@@ -21,10 +21,10 @@
 namespace EmacsMode {
 namespace Internal {
 
-const char * EmacsModeOptionPage::INSTALL_HANDLER                = "TextEditor.EmacsModeHandler";
-const char * EmacsModeOptionPage::SETTINGS_CATEGORY              = "D.EmacsMode";
-const char * EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON = ":/emacsmode/category_icon.png";
-const char * EmacsModeOptionPage::SETTINGS_ID                    = "A.General";
+const char EmacsModeOptionPage::INSTALL_HANDLER[]                  = "TextEditor.EmacsModeHandler";
+const char EmacsModeOptionPage::SETTINGS_CATEGORY[]                = "D.EmacsMode";
+const char EmacsModeOptionPage::SETTINGS_CATEGORY_EMACSMODE_ICON[] = ":/emacsmode/category_icon.png";
+const char EmacsModeOptionPage::SETTINGS_ID[]                      = "A.General";
 
 EmacsModeOptionPage::EmacsModeOptionPage()
 {
@@ -32,7 +32,7 @@ EmacsModeOptionPage::EmacsModeOptionPage()
   setDisplayName(tr("General"));
   setCategory(SETTINGS_CATEGORY);
   setDisplayCategory(tr("EmacsMode"));
-  setCategoryIcon(_(SETTINGS_CATEGORY_EMACSMODE_ICON));
+  setCategoryIcon(Utils::Icon(SETTINGS_CATEGORY_EMACSMODE_ICON));
 }
 
 QWidget *EmacsModeOptionPage::widget()

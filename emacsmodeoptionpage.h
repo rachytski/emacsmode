@@ -35,11 +35,11 @@ class EmacsModeOptionPage : public IOptionsPage
 
 public:
 
-  static const char * INSTALL_HANDLER;
-  static const char * SETTINGS_CATEGORY;
-  static const char * SETTINGS_CATEGORY_EMACSMODE_ICON;
-  static const char * SETTINGS_ID;
-
+  static const char INSTALL_HANDLER[];
+  static const char SETTINGS_CATEGORY[];
+  static const char SETTINGS_CATEGORY_EMACSMODE_ICON[];
+  static const char SETTINGS_ID[];
+  
   EmacsModeOptionPage();
 
   QWidget *widget();
