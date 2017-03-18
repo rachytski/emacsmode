@@ -18,7 +18,7 @@ HEADERS += emacsmodehandler.h \
 
 FORMS += emacsmodeoptions.ui
 
-!win* {
+macx {
     QMAKE_CXXFLAGS = -mmacosx-version-min=10.7 -std=gnu0x -stdlib=libc+
 }
 

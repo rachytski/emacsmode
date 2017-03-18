@@ -35,7 +35,7 @@ Shortcut::Shortcut(char const * s)
       m_mods |= Qt::ControlModifier;
     else if (key == QString::fromLocal8Bit("<META>"))
     {
-#ifdef _WIN32
+#if defined(Q_OS_WIN) || defined(Q_OS_LINUX)
       m_mods |= Qt::ControlModifier;
 #else
       m_mods |= Qt::MetaModifier;
