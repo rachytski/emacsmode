@@ -16,7 +16,6 @@
 #ifndef EMACSMODEPLUGIN_H
 #define EMACSMODEPLUGIN_H
 
-#include <coreplugin/dialogs/ioptionspage.h>
 #include <extensionsystem/iplugin.h>
 
 namespace EmacsMode {
@@ -36,9 +35,9 @@ public:
 
 private:
   // implementation of ExtensionSystem::IPlugin
-  bool initialize(const QStringList &arguments, QString *errorMessage);
-  ShutdownFlag aboutToShutdown();
-  void extensionsInitialized();
+  virtual bool initialize(const QStringList &arguments, QString *errorMessage) override;
+  virtual ShutdownFlag aboutToShutdown() override;
+  virtual void extensionsInitialized() override;
 
 private:
   friend class EmacsModePluginPrivate;

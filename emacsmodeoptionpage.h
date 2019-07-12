@@ -20,7 +20,7 @@
 #include <coreplugin/dialogs/ioptionspage.h>
 #include <utils/savedaction.h>
 #include "ui_emacsmodeoptions.h"
-#include "emacsmodeactions.h"
+#include "emacsmodesettings.h"
 
 typedef QLatin1String _;
 

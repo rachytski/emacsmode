@@ -13,8 +13,7 @@
 **
 **************************************************************************/
 
-#ifndef EMACSMODE_ACTIONS_H
-#define EMACSMODE_ACTIONS_H
+#pragma once
 
 #include <utils/savedaction.h>
 
@@ -60,5 +59,4 @@ Utils::SavedAction *theEmacsModeSetting(int code);
 } // namespace Internal
 } // namespace EmacsMode
 
-#endif // EMACSMODE_ACTTIONS_H
 

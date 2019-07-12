@@ -16,7 +16,7 @@
 #ifndef EMACSMODE_HANDLER_H
 #define EMACSMODE_HANDLER_H
 
-#include "emacsmodeactions.h"
+#include "emacsmodesettings.h"
 #include "emacsmodeshortcut.h"
 
 #include <QtCore/QObject>

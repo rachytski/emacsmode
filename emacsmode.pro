@@ -4,14 +4,14 @@ include(../../qtcreatorplugin.pri)
 QT += gui
 SOURCES += emacsmodehandler.cpp \
     emacsmodeplugin.cpp \
-    emacsmodeactions.cpp \
+    emacsmodesettings.cpp \
     emacsmodeshortcut.cpp \
     emacsmodeminibuffer.cpp \
     emacsmodeoptionpage.cpp
 
 HEADERS += emacsmodehandler.h \
     emacsmodeplugin.h \
-    emacsmodeactions.h \
+    emacsmodesettings.h \
     emacsmodeshortcut.h \
     emacsmodeminibuffer.h \
     emacsmodeoptionpage.h

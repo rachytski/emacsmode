@@ -186,7 +186,6 @@ public:
   QChar const firstNonBlankOnLine(int line);
 
   void showMessage(MessageLevel level, const QString &msg);
-  void notImplementedYet();
   void updateMiniBuffer();
   //    void updateSelection();
   QWidget *editor() const;
@@ -271,10 +270,10 @@ public:
     QString currentMessage;
     MessageLevel currentMessageLevel;
     QString currentCommand;
-  } g;
+  } globalState;
 };
 
-EmacsModeHandler::Private::GlobalData EmacsModeHandler::Private::g;
+EmacsModeHandler::Private::GlobalData EmacsModeHandler::Private::globalState;
 
 EmacsModeHandler::Private::Private(EmacsModeHandler *parent, QWidget *widget)
 {
@@ -745,10 +744,10 @@ void EmacsModeHandler::Private::updateMiniBuffer()
   QString msg;
   MessageLevel messageLevel = MessageInfo;
 
-  if (!g.currentMessage.isEmpty()) {
-    msg = g.currentMessage;
-    g.currentMessage.clear();
-    messageLevel = g.currentMessageLevel;
+  if (!globalState.currentMessage.isEmpty()) {
+    msg = globalState.currentMessage;
+    globalState.currentMessage.clear();
+    messageLevel = globalState.currentMessageLevel;
   }
 
   emit q->commandBufferChanged(msg, messageLevel);
@@ -766,16 +765,8 @@ int EmacsModeHandler::Private::physicalCursorColumn() const
 
 void EmacsModeHandler::Private::showMessage(MessageLevel level, const QString &msg)
 {
-  //qDebug() << "MSG: " << msg;
-  g.currentMessage = msg;
-  g.currentMessageLevel = level;
-  updateMiniBuffer();
-}
-
-void EmacsModeHandler::Private::notImplementedYet()
-{
-  qDebug() << "Not implemented in EmacsMode";
-  showMessage(MessageError, EmacsModeHandler::tr("Not implemented in EmacsMode"));
+  globalState.currentMessage = msg;
+  globalState.currentMessageLevel = level;
   updateMiniBuffer();
 }
 

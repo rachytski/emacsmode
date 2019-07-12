@@ -16,81 +16,33 @@
 #include "emacsmodeplugin.h"
 
 #include "emacsmodeminibuffer.h"
-#include "emacsmodeactions.h"
+#include "emacsmodesettings.h"
 #include "emacsmodehandler.h"
 #include "emacsmodeoptionpage.h"
 #include "ui_emacsmodeoptions.h"
 
-#include <coreplugin/actionmanager/actioncontainer.h>
-#include <coreplugin/actionmanager/actionmanager.h>
-#include <coreplugin/actionmanager/command.h>
-#include <coreplugin/actionmanager/command.h>
-#include <coreplugin/actionmanager/commandmappings.h>
 #include <coreplugin/coreconstants.h>
 #include <coreplugin/editormanager/editormanager.h>
 #include <coreplugin/editormanager/documentmodel.h>
 #include <coreplugin/find/findplugin.h>
-#include <coreplugin/find/textfindconstants.h>
-#include <coreplugin/find/ifindsupport.h>
 #include <coreplugin/documentmanager.h>
 #include <coreplugin/icore.h>
 #include <coreplugin/idocument.h>
-#include <coreplugin/messagemanager.h>
 #include <coreplugin/id.h>
 #include <coreplugin/statusbarwidget.h>
 #include <coreplugin/statusbarmanager.h>
 
-#include <projectexplorer/projectexplorerconstants.h>
-
 #include <texteditor/textdocumentlayout.h>
 #include <texteditor/texteditor.h>
-#include <texteditor/textmark.h>
-#include <texteditor/texteditorconstants.h>
-#include <texteditor/typingsettings.h>
 #include <texteditor/tabsettings.h>
-#include <texteditor/icodestylepreferences.h>
-#include <texteditor/texteditorsettings.h>
 #include <texteditor/indenter.h>
-#include <texteditor/codeassist/assistproposalitem.h>
-#include <texteditor/codeassist/genericproposalmodel.h>
-#include <texteditor/codeassist/completionassistprovider.h>
-#include <texteditor/codeassist/iassistprocessor.h>
-#include <texteditor/codeassist/assistinterface.h>
-#include <texteditor/codeassist/genericproposal.h>
 
-#include <utils/fancylineedit.h>
-#include <utils/hostosinfo.h>
 #include <utils/qtcassert.h>
-#include <utils/pathchooser.h>
-#include <utils/savedaction.h>
-#include <utils/stylehelper.h>
-
-#include <cpptools/cpptoolsconstants.h>
 
 #include <extensionsystem/pluginmanager.h>
 
-#include <QAbstractTableModel>
 #include <QDebug>
-#include <QFile>
-#include <QFileDialog>
-#include <QtPlugin>
 #include <QObject>
-#include <QPainter>
-#include <QPointer>
-#include <QSettings>
-#include <QScrollBar>
-#include <QStackedWidget>
-#include <QTextStream>
-
-#include <QDesktopServices>
-#include <QItemDelegate>
-#include <QPlainTextEdit>
-#include <QShortcut>
-#include <QTextBlock>
-#include <QTextCursor>
-#include <QTextEdit>
-#include <QTimer>
-#include <QTreeWidgetItem>
 
 using namespace TextEditor;
 using namespace Core;
@@ -127,7 +79,6 @@ private slots:
   void setUseEmacsMode(const QVariant &value);
   void setUseEmacsModeInternal(bool on);
   void quitEmacsMode();
-  //void showSettingsDialog();
 
   void resetCommandBuffer();
   void showCommandBuffer(const QString &contents, int messageLevel);
@@ -137,23 +88,10 @@ private slots:
   void writeSettings();
   void readSettings();
 
-  void handleDelayedQuitAll(bool forced);
-  void handleDelayedQuit(bool forced, Core::IEditor *editor);
-
-  void switchToFile(int n);
-  int currentFile() const;
-
-signals:
-  void delayedQuitRequested(bool forced, Core::IEditor *editor);
-  void delayedQuitAllRequested(bool forced);
-
 private:
   EmacsModePlugin *q;
   EmacsModeOptionPage *m_emacsModeOptionsPage;
   QHash<IEditor *, EmacsModeHandler *> m_editorToHandler;
-
-  void triggerAction(const Id &id);
-  void setActionChecked(const Id &id, bool check);
 
   StatusBarWidget *m_statusBar;
 };
@@ -194,15 +132,6 @@ bool EmacsModePluginPrivate::initialize()
 
   readSettings();
 
-  Command *cmd = 0;
-  cmd = ActionManager::registerAction(theEmacsModeSetting(ConfigUseEmacsMode),
-                                      EmacsModeOptionPage::INSTALL_HANDLER, globalcontext, true);
-  cmd->setDefaultKeySequence(QKeySequence(UseMacShortcuts ? tr("Meta+V,Meta+V") : tr("Alt+V,Alt+V")));
-
-  ActionContainer *advancedMenu =
-      ActionManager::actionContainer(Core::Constants::M_EDIT_ADVANCED);
-  advancedMenu->addAction(cmd, Core::Constants::G_EDIT_EDITOR);
-
   connect(ICore::instance(), SIGNAL(coreAboutToClose()), this, SLOT(onCoreAboutToClose()));
 
   // EditorManager
@@ -213,12 +142,6 @@ bool EmacsModePluginPrivate::initialize()
 
   connect(theEmacsModeSetting(ConfigUseEmacsMode), SIGNAL(valueChanged(QVariant)),
           this, SLOT(setUseEmacsMode(QVariant)));
-
-  // Delayed operations.
-  connect(this, SIGNAL(delayedQuitRequested(bool,Core::IEditor*)),
-          this, SLOT(handleDelayedQuit(bool,Core::IEditor*)), Qt::QueuedConnection);
-  connect(this, SIGNAL(delayedQuitAllRequested(bool)),
-          this, SLOT(handleDelayedQuitAll(bool)), Qt::QueuedConnection);
 
   return true;
 }
@@ -236,31 +159,6 @@ void EmacsModePluginPrivate::readSettings()
 }
 
 
-/*void EmacsModePluginPrivate::showSettingsDialog()
-{
-  ICore::showOptionsDialog(EmacsModeOptionPage::SETTINGS_CATEGORY, EmacsModeOptionPage::SETTINGS_ID);
-}*/
-
-void EmacsModePluginPrivate::triggerAction(const Id &id)
-{
-  Core::Command *cmd = ActionManager::command(id);
-  QTC_ASSERT(cmd, qDebug() << "UNKNOWN CODE: " << id.name(); return);
-  QAction *action = cmd->action();
-  QTC_ASSERT(action, return);
-  action->trigger();
-}
-
-void EmacsModePluginPrivate::setActionChecked(const Id &id, bool check)
-{
-  Core::Command *cmd = ActionManager::command(id);
-  QTC_ASSERT(cmd, return);
-  QAction *action = cmd->action();
-  QTC_ASSERT(action, return);
-  QTC_ASSERT(action->isCheckable(), return);
-  action->setChecked(!check); // trigger negates the action's state
-  action->trigger();
-}
-
 // This class defers deletion of a child EmacsModeHandler using deleteLater().
 class DeferredDeleter : public QObject
 {
@@ -276,7 +174,6 @@ public:
   ~DeferredDeleter()
   {
     if (m_handler) {
-      //m_handler->disconnectFromEditor();
       m_handler->deleteLater();
       m_handler = 0;
     }
@@ -297,7 +194,7 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
     return;
 
   qDebug() << "OPENING: " << editor << editor->widget()
-           << "MODE: " << theEmacsModeSetting(ConfigUseEmacsMode)->value();
+           << "EMACSMODE: " << theEmacsModeSetting(ConfigUseEmacsMode)->value();
 
   EmacsModeHandler *handler = new EmacsModeHandler(widget, 0);
   // the handler might have triggered the deletion of the editor:
@@ -340,10 +237,6 @@ void EmacsModePluginPrivate::setUseEmacsModeInternal(bool on)
     foreach (IEditor *editor, m_editorToHandler.keys())
       m_editorToHandler[editor]->setupWidget();
   } else {
-    //ICore *core = ICore::instance();
-    //core->updateAdditionalContexts(Context(),
-    // Context(EmacsMode_CONTEXT));
-    //        resetCommandBuffer();
     foreach (IEditor *editor, m_editorToHandler.keys()) {
       if (TextDocument *textDocument =
           qobject_cast<TextDocument *>(editor->document())) {
@@ -351,22 +244,6 @@ void EmacsModePluginPrivate::setUseEmacsModeInternal(bool on)
       }
     }
   }
-}
-
-void EmacsModePluginPrivate::handleDelayedQuit(bool forced, IEditor *editor)
-{
-  // This tries to simulate vim behaviour. But the models of vim and
-  // Qt Creator core do not match well...
-  if (EditorManager::hasSplitter())
-    triggerAction(Core::Constants::REMOVE_CURRENT_SPLIT);
-  else
-    EditorManager::closeEditor(editor, !forced);
-}
-
-void EmacsModePluginPrivate::handleDelayedQuitAll(bool forced)
-{
-  triggerAction(Core::Constants::REMOVE_ALL_SPLITS);
-  EditorManager::closeAllEditors(!forced);
 }
 
 void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
@@ -410,24 +287,6 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
 void EmacsModePluginPrivate::quitEmacsMode()
 {
   theEmacsModeSetting(ConfigUseEmacsMode)->setValue(false);
-}
-
-int EmacsModePluginPrivate::currentFile() const
-{
-  IEditor *editor = EditorManager::currentEditor();
-  if (!editor)
-    return -1;
-  return DocumentModel::indexOfDocument(editor->document());
-}
-
-void EmacsModePluginPrivate::switchToFile(int n)
-{
-  int size = DocumentModel::entryCount();
-  QTC_ASSERT(size, return);
-  n = n % size;
-  if (n < 0)
-    n += size;
-  EditorManager::activateEditorForEntry(DocumentModel::entries().at(n));
 }
 
 void EmacsModePluginPrivate::resetCommandBuffer()
@@ -482,5 +341,3 @@ void EmacsModePlugin::extensionsInitialized()
 } // namespace EmacsMode
 
 #include "emacsmodeplugin.moc"
-
-//Q_EXPORT_PLUGIN2(EmacsMode::Internal::EmacsModePlugin)
