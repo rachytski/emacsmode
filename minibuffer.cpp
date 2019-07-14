@@ -13,7 +13,7 @@
 **
 **************************************************************************/
 
-#include "emacsmodeminibuffer.h"
+#include "minibuffer.hpp"
 
 #include <QLabel>
 #include <QLineEdit>

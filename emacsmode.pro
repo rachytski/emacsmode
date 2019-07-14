@@ -6,17 +6,19 @@ SOURCES += emacsmodehandler.cpp \
     emacsmodeplugin.cpp \
     emacsmodesettings.cpp \
     emacsmodeshortcut.cpp \
-    emacsmodeminibuffer.cpp \
     emacsmodeoptionpage.cpp \ 
+    minibuffer.cpp \
     pluginstate.cpp \
+    range.cpp \
 
 HEADERS += emacsmodehandler.h \
     emacsmodeplugin.h \
     emacsmodesettings.h \
     emacsmodeshortcut.h \
-    emacsmodeminibuffer.h \
     emacsmodeoptionpage.h \
+    minibuffer.hpp \
     pluginstate.hpp \
+    range.hpp \
 
 FORMS += emacsmodeoptions.ui
 
