@@ -7,14 +7,16 @@ SOURCES += emacsmodehandler.cpp \
     emacsmodesettings.cpp \
     emacsmodeshortcut.cpp \
     emacsmodeminibuffer.cpp \
-    emacsmodeoptionpage.cpp
+    emacsmodeoptionpage.cpp \ 
+    pluginstate.cpp \
 
 HEADERS += emacsmodehandler.h \
     emacsmodeplugin.h \
     emacsmodesettings.h \
     emacsmodeshortcut.h \
     emacsmodeminibuffer.h \
-    emacsmodeoptionpage.h
+    emacsmodeoptionpage.h \
+    pluginstate.hpp \
 
 FORMS += emacsmodeoptions.ui
 

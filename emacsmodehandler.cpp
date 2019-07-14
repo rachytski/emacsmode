@@ -24,9 +24,6 @@
 //   Qt Creator. The idea is to keep this file here in a "clean" state that
 //   allows easy reuse with any QTextEdit or QPlainTextEdit derived class.
 //
-// 2 There are a few auto tests located in ../../../tests/auto/EmacsMode.
-//   Commands that are covered there are marked as "// tested" below.
-//
 // 3 Some conventions:
 //
 //   Use 1 based line numbers and 0 based column numbers. Even though
@@ -66,6 +63,8 @@
 #include <climits>
 #include <ctype.h>
 
+#include "pluginstate.hpp"
+
 using namespace Utils;
 
 namespace EmacsMode {
@@ -77,29 +76,11 @@ namespace Internal {
 //
 ///////////////////////////////////////////////////////////////////////
 
-#define StartOfLine     QTextCursor::StartOfLine
-#define EndOfLine       QTextCursor::EndOfLine
-#define MoveAnchor      QTextCursor::MoveAnchor
-#define KeepAnchor      QTextCursor::KeepAnchor
-#define Up              QTextCursor::Up
-#define Down            QTextCursor::Down
-#define Right           QTextCursor::Right
-#define Left            QTextCursor::Left
-#define EndOfDocument   QTextCursor::End
-#define StartOfDocument QTextCursor::Start
-
 #define EDITOR(s) (m_textedit ? m_textedit->s : m_plaintextedit->s)
 
 const int ParagraphSeparator = 0x00002029;
 
 using namespace Qt;
-
-enum EventResult
-{
-  EventHandled,
-  EventUnhandled,
-  EventPassedToCore
-};
 
 Range::Range()
   : beginPos(-1), endPos(-1), rangemode(RangeCharMode)
@@ -125,188 +106,90 @@ QDebug operator<<(QDebug ts, const Range &range)
   return ts << '[' << range.beginPos << ',' << range.endPos << ']';
 }
 
-class EmacsModeHandler::Private
+PluginState EmacsModeHandler::pluginState;
+
+///////////////////////////////////////////////////////////////////////
+//
+// EmacsModeHandler
+//
+///////////////////////////////////////////////////////////////////////
+
+EmacsModeHandler::EmacsModeHandler(QWidget *widget, QObject *parent)
+  : QObject(parent)
 {
-public:
-
-  friend class EmacsModeHandler;
-
-  Private(EmacsModeHandler *parent, QWidget *widget);
-
-  EventResult handleEvent(QKeyEvent *ev);
-  bool wantsOverride(QKeyEvent *ev);
-
-  void installEventFilter();
-
-  void init();
-
-  bool atEndOfLine() const
-  { return m_tc.atBlockEnd() && m_tc.block().length() > 1; }
-
-  int lastPositionInDocument() const; // last valid pos in doc
-  int firstPositionInLine(int line) const; // 1 based line, 0 based pos
-  int lastPositionInLine(int line) const; // 1 based line, 0 based pos
-  int lineForPosition(int pos) const;  // 1 based line, 0 based pos
-  QString lineContents(int line) const; // 1 based line
-  void setLineContents(int line, const QString &contents) const; // 1 based line
-
-  int linesInDocument() const;
-
-  // all zero-based counting
-  int cursorLineInDocument() const;
-  int firstVisibleLineInDocument() const;
-
-  QTextBlock block() const { return m_tc.block(); }
-
-  void indentRegion();
-  void indentRegionWithCharacter(QChar lastTyped);
-
-  void moveToStartOfLine();
-  void moveToEndOfLine();
-  void moveUp(int n = 1) { m_tc.movePosition(Up, m_moveMode, n); }
-  void moveDown(int n = 1) { m_tc.movePosition(Down, m_moveMode, n); }
-  void moveRight(int n = 1) { m_tc.movePosition(Right, m_moveMode, n); }
-  void moveLeft(int n = 1) { m_tc.movePosition(Left, m_moveMode, n); }
-  void newLine(){m_tc.insertBlock();}
-  void backspace(){m_tc.deletePreviousChar();}
-  void insertBackSlash(){m_tc.insertText(QString::fromLatin1("\\"));}
-  void insertStraightDelim(){m_tc.insertText(QString::fromLatin1("|"));}
-  void setAnchor(int position) { m_anchor = position; }
-  void setPosition(int position) { m_tc.setPosition(position, MoveAnchor); }
-
-  void selectRange(int beginLine, int endLine);
-
-  int lineNumber(const QTextBlock &block) const;
-
-  QTextDocument *document() const { return EDITOR(document()); }
-
-  void moveToFirstNonBlankOnLine();
-  void moveToFirstNonBlankOnLine(QTextCursor *tc);
-  void moveToNonBlankOnLine(QTextCursor *tc);
-  QChar const firstNonBlankOnLine(int line);
-
-  void showMessage(MessageLevel level, const QString &msg);
-  void updateMiniBuffer();
-  //    void updateSelection();
-  QWidget *editor() const;
-  void beginEditBlock() { m_tc.beginEditBlock(); }
-  void beginEditBlock(int pos) { setUndoPosition(pos); beginEditBlock(); }
-  void endEditBlock() { m_tc.endEditBlock(); }
-  void joinPreviousEditBlock() { m_tc.joinPreviousEditBlock(); }
-  int cursorLine() const;
-  int physicalCursorColumn() const;
-
-  void setupWidget();
-  void restoreWidget(int tabSize);
-
-  void onContentsChanged(int position, int charsRemoved, int charsAdded);
-  void onUndoCommandAdded();
-
-public:
-  QTextEdit *m_textedit;
-  QPlainTextEdit *m_plaintextedit;
-
-  EmacsModeHandler *q;
-  QTextCursor m_tc;
-  int m_anchor;
-
-  QString m_currentFileName;
-
-  int anchor() const { return m_anchor; }
-  int position() const { return m_tc.position(); }
-
-  QString selectText(const Range &range) const;
-
-  // undo handling
-  void undo();
-  void redo();
-  void setUndoPosition(int pos);
-  bool m_recordCursorPosition;
-  QMap<int, int> m_undoCursorPosition; // revision -> position
-
-  QVariant config(int code) const { return theEmacsModeSetting(code)->value(); }
-  bool hasConfig(int code) const { return config(code).toBool(); }
-  bool hasConfig(int code, const char *value) const // FIXME
-  { return config(code).toString().contains(QString::fromLatin1(value)); }
-
-  typedef std::list<EmacsMode::Shortcut> TShortcutList;
-  TShortcutList m_shortcuts;
-  TShortcutList m_partialShortcuts;
-
-  QTextCursor::MoveMode m_moveMode;
-
-  void setMoveMode(QTextCursor::MoveMode moveMode);
-  void anchorCurrentPos();
-
-  QStringList m_killBuffer;
-
-  void cleanKillBuffer();
-  void killLine();
-  void killSymbol();
-
-  void yank();
-
-  void copySelected();
-  void killSelected();
-
-  bool m_isAppendingKillBuffer;
-  void setKillBufferAppending(bool flag);
-
-  void saveToFile(QString const & fileName);
-  void saveCurrentFile();
-
-  void commentOutRegion();
-  void uncommentRegion();
-
-  // Data shared among all editors.
-  static struct GlobalData
-  {
-    GlobalData()
-      : currentMessageLevel(MessageInfo)
-    {
-    }
-
-    // Current mini buffer message.
-    QString currentMessage;
-    MessageLevel currentMessageLevel;
-    QString currentCommand;
-  } globalState;
-};
-
-EmacsModeHandler::Private::GlobalData EmacsModeHandler::Private::globalState;
-
-EmacsModeHandler::Private::Private(EmacsModeHandler *parent, QWidget *widget)
-{
-  q = parent;
   m_textedit = qobject_cast<QTextEdit *>(widget);
   m_plaintextedit = qobject_cast<QPlainTextEdit *>(widget);
   init();
-
+  
   if (editor()) {
-    parent->connect(EDITOR(document()), SIGNAL(contentsChange(int,int,int)),
-                    SLOT(onContentsChanged(int,int,int)));
-    parent->connect(EDITOR(document()), SIGNAL(undoCommandAdded()), SLOT(onUndoCommandAdded()));
+    connect(EDITOR(document()), SIGNAL(contentsChange(int,int,int)),
+            SLOT(onContentsChanged(int,int,int)));
+    connect(EDITOR(document()), SIGNAL(undoCommandAdded()), SLOT(onUndoCommandAdded()));
   }
 }
 
-QWidget *EmacsModeHandler::Private::editor() const
+bool EmacsModeHandler::eventFilter(QObject *ob, QEvent *ev)
+{
+  bool active = theEmacsModeSetting(ConfigUseEmacsMode)->value().toBool();
+
+  if (active && ev->type() == QEvent::KeyPress && ob == editor()) {
+    QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
+    EventResult res = handleEvent(kev);
+    return res == EventHandled;
+  }
+
+  if (active && ev->type() == QEvent::ShortcutOverride && ob == editor()) {
+    QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
+    if (wantsOverride(kev)) {
+      ev->accept(); // accepting means "don't run the shortcuts"
+      return true;
+    }
+    return true;
+  }
+
+  return QObject::eventFilter(ob, ev);
+}
+
+bool EmacsModeHandler::atEndOfLine() const {
+  return m_tc.atBlockEnd() && m_tc.block().length() > 1; 
+}
+
+QTextBlock EmacsModeHandler::block() const { 
+  return m_tc.block(); 
+}
+
+void EmacsModeHandler::setCurrentFileName(const QString &fileName)
+{
+  m_currentFileName = fileName;
+}
+
+QWidget *EmacsModeHandler::widget()
+{
+  return editor();
+}
+
+QWidget *EmacsModeHandler::editor() const
 {
   return m_textedit
       ? static_cast<QWidget *>(m_textedit)
       : static_cast<QWidget *>(m_plaintextedit);
 }
 
-void EmacsModeHandler::Private::setupWidget()
+QTextDocument *EmacsModeHandler::document() const { 
+  return EDITOR(document()); 
+}
+
+void EmacsModeHandler::setupWidget()
 {
   updateMiniBuffer();
 }
 
-void EmacsModeHandler::Private::restoreWidget(int tabSize)
+void EmacsModeHandler::restoreWidget(int tabSize)
 {
   EDITOR(setOverwriteMode(false));
 }
 
-void EmacsModeHandler::Private::onContentsChanged(int position, int charsRemoved, int charsAdded)
+void EmacsModeHandler::onContentsChanged(int position, int charsRemoved, int charsAdded)
 {
   if (m_recordCursorPosition)
   {
@@ -315,89 +198,84 @@ void EmacsModeHandler::Private::onContentsChanged(int position, int charsRemoved
   }
 }
 
-void EmacsModeHandler::Private::onUndoCommandAdded()
+void EmacsModeHandler::onUndoCommandAdded()
 {
   m_recordCursorPosition = true;
 }
 
-void EmacsModeHandler::Private::init()
+void EmacsModeHandler::init()
 {
-  m_anchor = 0;
-
-  m_moveMode = QTextCursor::MoveAnchor;
-  m_isAppendingKillBuffer = false;
-  m_recordCursorPosition = false;
-  cleanKillBuffer();
+  cleanKillRing();
 
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|p")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveUp, this, 1))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveUp, this, 1))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|n")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveDown, this, 1))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveDown, this, 1))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|f")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveRight, this, 1))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveRight, this, 1))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|b")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveLeft, this, 1))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveLeft, this, 1))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|m")
-                        .addFn(std::bind(&EmacsModeHandler::Private::newLine, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::newLine, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|h")
-                        .addFn(std::bind(&EmacsModeHandler::Private::backspace, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::backspace, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|e")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveToEndOfLine, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveToEndOfLine, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|a")
-                        .addFn(std::bind(&EmacsModeHandler::Private::moveToStartOfLine, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::moveToStartOfLine, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|<SHIFT>|<UNDERSCORE>")
-                        .addFn(std::bind(&EmacsModeHandler::Private::undo, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::undo, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<TAB>")
-                        .addFn(std::bind(&EmacsModeHandler::Private::indentRegion, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+                        .addFn(std::bind(&EmacsModeHandler::indentRegion, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<META>|<SPACE>")
-                        .addFn(std::bind(&EmacsModeHandler::Private::anchorCurrentPos, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setMoveMode, this, QTextCursor::KeepAnchor)));
+                        .addFn(std::bind(&EmacsModeHandler::anchorCurrentPos, this))
+                        .addFn(std::bind(&EmacsModeHandler::setMoveMode, this, QTextCursor::KeepAnchor)));
   m_shortcuts.push_back(EmacsMode::Shortcut("<ESC>|<ESC>")
-                        .addFn(std::bind(&EmacsModeHandler::Private::setMoveMode, this, QTextCursor::MoveAnchor))
-                        .addFn(std::bind(&EmacsModeHandler::Private::anchorCurrentPos, this)));
+                        .addFn(std::bind(&EmacsModeHandler::setMoveMode, this, QTextCursor::MoveAnchor))
+                        .addFn(std::bind(&EmacsModeHandler::anchorCurrentPos, this)));
 
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|w").addFn(std::bind(&EmacsModeHandler::Private::killSelected, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<ALT>|w").addFn(std::bind(&EmacsModeHandler::Private::copySelected, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|<SLASH>").addFn(std::bind(&EmacsModeHandler::Private::insertBackSlash, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<CONTROL>|<SLASH>").addFn(std::bind(&EmacsModeHandler::Private::insertStraightDelim, this))
-                        .addFn(std::bind(&EmacsModeHandler::Private::setKillBufferAppending, this, false)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|w").addFn(std::bind(&EmacsModeHandler::killSelected, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<ALT>|w").addFn(std::bind(&EmacsModeHandler::copySelected, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|<SLASH>").addFn(std::bind(&EmacsModeHandler::insertBackSlash, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<CONTROL>|<SLASH>").addFn(std::bind(&EmacsModeHandler::insertStraightDelim, this))
+                        .addFn(std::bind(&EmacsModeHandler::setKillBufferAppending, this, false)));
   //    m_shortcuts.push_back(Emacs::Shortcut("<ALT>|w").addFn(std::bind(&EmacsModeHandler::Private::copySelected, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|k").addFn(std::bind(&EmacsModeHandler::Private::killLine, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|d").addFn(std::bind(&EmacsModeHandler::Private::killSymbol, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|y").addFn(std::bind(&EmacsModeHandler::Private::yank, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|x|s").addFn(std::bind(&EmacsModeHandler::Private::saveCurrentFile, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|i|c").addFn(std::bind(&EmacsModeHandler::Private::commentOutRegion, this)));
-  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|i|u").addFn(std::bind(&EmacsModeHandler::Private::uncommentRegion, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|k").addFn(std::bind(&EmacsModeHandler::killLine, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|d").addFn(std::bind(&EmacsModeHandler::killSymbol, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|y").addFn(std::bind(&EmacsModeHandler::yank, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|x|s").addFn(std::bind(&EmacsModeHandler::saveCurrentFile, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|i|c").addFn(std::bind(&EmacsModeHandler::commentOutRegion, this)));
+  m_shortcuts.push_back(EmacsMode::Shortcut("<META>|i|u").addFn(std::bind(&EmacsModeHandler::uncommentRegion, this)));
 }
 
-void EmacsModeHandler::Private::saveCurrentFile()
+void EmacsModeHandler::saveCurrentFile()
 {
   saveToFile(m_currentFileName);
 }
 
-void EmacsModeHandler::Private::moveToFirstNonBlankOnLine()
+void EmacsModeHandler::moveToFirstNonBlankOnLine()
 {
   moveToFirstNonBlankOnLine(&m_tc);
 }
 
-void EmacsModeHandler::Private::moveToFirstNonBlankOnLine(QTextCursor *tc)
+void EmacsModeHandler::moveToFirstNonBlankOnLine(QTextCursor *tc)
 {
-  tc->setPosition(tc->block().position(), KeepAnchor);
+  tc->setPosition(tc->block().position(), QTextCursor::KeepAnchor);
   moveToNonBlankOnLine(tc);
 }
 
-void EmacsModeHandler::Private::moveToNonBlankOnLine(QTextCursor *tc)
+void EmacsModeHandler::moveToNonBlankOnLine(QTextCursor *tc)
 {
   QTextDocument *doc = tc->document();
   const QTextBlock block = tc->block();
@@ -405,10 +283,10 @@ void EmacsModeHandler::Private::moveToNonBlankOnLine(QTextCursor *tc)
   int i = tc->position();
   while (doc->characterAt(i).isSpace() && i < maxPos)
     ++i;
-  tc->setPosition(i, KeepAnchor);
+  tc->setPosition(i, QTextCursor::KeepAnchor);
 }
 
-QChar const EmacsModeHandler::Private::firstNonBlankOnLine(int line)
+QChar const EmacsModeHandler::firstNonBlankOnLine(int line)
 {
   QString const s = lineContents(line);
   int i = 0;
@@ -420,7 +298,7 @@ QChar const EmacsModeHandler::Private::firstNonBlankOnLine(int line)
     return QChar();
 }
 
-void EmacsModeHandler::Private::commentOutRegion()
+void EmacsModeHandler::commentOutRegion()
 {
   int beginLine = lineForPosition(m_tc.anchor());
   int endLine = lineForPosition(m_tc.position());
@@ -449,7 +327,7 @@ void EmacsModeHandler::Private::commentOutRegion()
   //    moveToFirstNonBlankOnLine();
 }
 
-void EmacsModeHandler::Private::uncommentRegion()
+void EmacsModeHandler::uncommentRegion()
 {
   int beginLine = lineForPosition(m_tc.anchor());
   int endLine = lineForPosition(m_tc.position());
@@ -480,7 +358,7 @@ void EmacsModeHandler::Private::uncommentRegion()
   //    moveToFirstNonBlankOnLine();
 }
 
-int EmacsModeHandler::Private::lineNumber(const QTextBlock &block) const
+int EmacsModeHandler::lineNumber(const QTextBlock &block) const
 {
   if (block.isVisible())
     return block.firstLineNumber() + 1;
@@ -492,12 +370,12 @@ int EmacsModeHandler::Private::lineNumber(const QTextBlock &block) const
   return block2.firstLineNumber() + 1;
 }
 
-QString EmacsModeHandler::Private::selectText(const Range &range) const
+QString EmacsModeHandler::selectText(const Range &range) const
 {
   if (range.rangemode == RangeCharMode) {
     QTextCursor tc(document());
-    tc.setPosition(range.beginPos, MoveAnchor);
-    tc.setPosition(range.endPos, KeepAnchor);
+    tc.setPosition(range.beginPos, QTextCursor::MoveAnchor);
+    tc.setPosition(range.endPos, QTextCursor::KeepAnchor);
     return tc.selection().toPlainText();
   }
   if (range.rangemode == RangeLineMode) {
@@ -507,8 +385,8 @@ QString EmacsModeHandler::Private::selectText(const Range &range) const
     int lastDocumentLine = document()->blockCount();
     bool endOfDoc = lastLine == lastDocumentLine;
     int lastPos = endOfDoc ? lastPositionInDocument() : firstPositionInLine(lastLine + 1);
-    tc.setPosition(firstPos, MoveAnchor);
-    tc.setPosition(lastPos, KeepAnchor);
+    tc.setPosition(firstPos, QTextCursor::MoveAnchor);
+    tc.setPosition(lastPos, QTextCursor::KeepAnchor);
     QString contents = tc.selection().toPlainText();
     return contents;// + QLatin1String(endOfDoc ? "\n" : "");
   }
@@ -542,7 +420,7 @@ QString EmacsModeHandler::Private::selectText(const Range &range) const
   return contents;
 }
 
-void EmacsModeHandler::Private::saveToFile(QString const & fileName)
+void EmacsModeHandler::saveToFile(QString const & fileName)
 {
   int beginLine = 0;
   int endLine = linesInDocument();
@@ -557,7 +435,7 @@ void EmacsModeHandler::Private::saveToFile(QString const & fileName)
     QString contents = selectText(range);
     m_tc = tc;
     bool handled = false;
-    emit q->writeFileRequested(&handled, fileName, contents);
+    emit writeFileRequested(&handled, fileName, contents);
     // nobody cared, so act ourselves
     if (!handled) {
       QFile::remove(fileName);
@@ -587,90 +465,88 @@ void EmacsModeHandler::Private::saveToFile(QString const & fileName)
   }
 }
 
-void EmacsModeHandler::Private::setKillBufferAppending(bool flag)
+void EmacsModeHandler::setKillBufferAppending(bool flag)
 {
+  if (!m_isAppendingKillBuffer) {
+    pluginState.m_killRing.clear();
+  }
   m_isAppendingKillBuffer = flag;
+  if (!m_isAppendingKillBuffer) {
+    pluginState.m_killRing.clear();
+  }
 }
 
-void EmacsModeHandler::Private::copySelected()
+void EmacsModeHandler::copySelected()
 {
-  if (!m_isAppendingKillBuffer)
-    m_killBuffer.clear();
-  m_isAppendingKillBuffer = true;
-  m_killBuffer.append(m_tc.selectedText());
+  setKillBufferAppending(true);
+  pluginState.m_killRing.append(m_tc.selectedText());
   anchorCurrentPos();
   setKillBufferAppending(true);
-  setMoveMode(MoveAnchor);
+  setMoveMode(QTextCursor::MoveAnchor);
 }
 
-void EmacsModeHandler::Private::killSelected()
+void EmacsModeHandler::killSelected()
 {
-  if (!m_isAppendingKillBuffer)
-    m_killBuffer.clear();
-  m_isAppendingKillBuffer = true;
-  m_killBuffer.append(m_tc.selectedText());
+  setKillBufferAppending(true);
+  pluginState.m_killRing.append(m_tc.selectedText());
   m_tc.removeSelectedText();
   anchorCurrentPos();
   setKillBufferAppending(true);
-  setMoveMode(MoveAnchor);
+  setMoveMode(QTextCursor::MoveAnchor);
 }
 
-void EmacsModeHandler::Private::killSymbol()
+void EmacsModeHandler::killSymbol()
 {
-  if (!m_isAppendingKillBuffer)
-    m_killBuffer.clear();
-  m_isAppendingKillBuffer = true;
+  setKillBufferAppending(true);
 
-  m_tc.setPosition(m_tc.position(), MoveAnchor);
-  m_tc.movePosition(QTextCursor::NextCharacter, KeepAnchor);
-  m_killBuffer.append(m_tc.selectedText());
+  m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
+  m_tc.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+  pluginState.m_killRing.append(m_tc.selectedText());
 
   m_tc.removeSelectedText();
 }
 
-void EmacsModeHandler::Private::cleanKillBuffer()
+void EmacsModeHandler::cleanKillRing()
 {
-  m_killBuffer.clear();
+  pluginState.m_killRing.clear();
 }
 
-void EmacsModeHandler::Private::yank()
+void EmacsModeHandler::yank()
 {
-  m_tc.insertText(m_killBuffer.join(QString::fromLatin1("")));
+  m_tc.insertText(pluginState.m_killRing.join(QString::fromLatin1("")));
 }
 
-void EmacsModeHandler::Private::killLine()
+void EmacsModeHandler::killLine()
 {
-  if (!m_isAppendingKillBuffer)
-    m_killBuffer.clear();
-  m_isAppendingKillBuffer = true;
+  setKillBufferAppending(true);
   bool isEndOfLine = (atEndOfLine() || (m_tc.block().length() == 1));
 
   if (!isEndOfLine)
   {
-    m_tc.setPosition(m_tc.position(), MoveAnchor);
-    m_tc.movePosition(QTextCursor::EndOfLine, KeepAnchor);
-    m_killBuffer.append(m_tc.selectedText());
+    m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
+    m_tc.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+    pluginState.m_killRing.append(m_tc.selectedText());
   }
   else
   {
-    m_tc.setPosition(m_tc.position(), MoveAnchor);
-    m_tc.movePosition(QTextCursor::NextCharacter, KeepAnchor);
-    m_killBuffer.append(m_tc.selectedText());
+    m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
+    m_tc.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+    pluginState.m_killRing.append(m_tc.selectedText());
   }
   m_tc.removeSelectedText();
 }
 
-void EmacsModeHandler::Private::setMoveMode(QTextCursor::MoveMode moveMode)
+void EmacsModeHandler::setMoveMode(QTextCursor::MoveMode moveMode)
 {
   m_moveMode = moveMode;
 }
 
-void EmacsModeHandler::Private::anchorCurrentPos()
+void EmacsModeHandler::anchorCurrentPos()
 {
-  m_tc.setPosition(m_tc.position(), MoveAnchor);
+  m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
 }
 
-bool EmacsModeHandler::Private::wantsOverride(QKeyEvent *ev)
+bool EmacsModeHandler::wantsOverride(QKeyEvent *ev)
 {
   TShortcutList shortcuts = m_partialShortcuts.empty() ? m_shortcuts : m_partialShortcuts;
   for (TShortcutList::const_iterator it = shortcuts.begin(); it != shortcuts.end(); ++it)
@@ -679,7 +555,7 @@ bool EmacsModeHandler::Private::wantsOverride(QKeyEvent *ev)
   return false;
 }
 
-EventResult EmacsModeHandler::Private::handleEvent(QKeyEvent *ev)
+EventResult EmacsModeHandler::handleEvent(QKeyEvent *ev)
 {
   m_tc = EDITOR(textCursor());
   if (m_partialShortcuts.empty())
@@ -714,29 +590,29 @@ EventResult EmacsModeHandler::Private::handleEvent(QKeyEvent *ev)
   return isAccepted ? EventHandled : EventPassedToCore;
 }
 
-void EmacsModeHandler::Private::installEventFilter()
+void EmacsModeHandler::installEventFilter()
 {
-  EDITOR(installEventFilter(q));
+  EDITOR(installEventFilter(this));
 }
 
-void EmacsModeHandler::Private::setUndoPosition(int pos)
+void EmacsModeHandler::setUndoPosition(int pos)
 {
   m_undoCursorPosition[m_tc.document()->availableUndoSteps()] = pos;
 }
 
-void EmacsModeHandler::Private::moveToEndOfLine()
+void EmacsModeHandler::moveToEndOfLine()
 {
   // does not work for "hidden" documents like in the autotests
-  m_tc.movePosition(EndOfLine, m_moveMode);
+  m_tc.movePosition(QTextCursor::EndOfLine, m_moveMode);
 }
 
-void EmacsModeHandler::Private::moveToStartOfLine()
+void EmacsModeHandler::moveToStartOfLine()
 {
   // does not work for "hidden" documents like in the autotests
-  m_tc.movePosition(StartOfLine, m_moveMode);
+  m_tc.movePosition(QTextCursor::StartOfLine, m_moveMode);
 }
 
-void EmacsModeHandler::Private::updateMiniBuffer()
+void EmacsModeHandler::updateMiniBuffer()
 {
   if (!m_textedit && !m_plaintextedit)
     return;
@@ -744,33 +620,33 @@ void EmacsModeHandler::Private::updateMiniBuffer()
   QString msg;
   MessageLevel messageLevel = MessageInfo;
 
-  if (!globalState.currentMessage.isEmpty()) {
-    msg = globalState.currentMessage;
-    globalState.currentMessage.clear();
-    messageLevel = globalState.currentMessageLevel;
+  if (!pluginState.currentMessage.isEmpty()) {
+    msg = pluginState.currentMessage;
+    pluginState.currentMessage.clear();
+    messageLevel = pluginState.currentMessageLevel;
   }
 
-  emit q->commandBufferChanged(msg, messageLevel);
+  emit commandBufferChanged(msg, messageLevel);
 }
 
-int EmacsModeHandler::Private::cursorLine() const
+int EmacsModeHandler::cursorLine() const
 {
   return lineForPosition(position()) - 1;
 }
 
-int EmacsModeHandler::Private::physicalCursorColumn() const
+int EmacsModeHandler::physicalCursorColumn() const
 {
   return position() - block().position();
 }
 
-void EmacsModeHandler::Private::showMessage(MessageLevel level, const QString &msg)
+void EmacsModeHandler::showMessage(MessageLevel level, const QString &msg)
 {
-  globalState.currentMessage = msg;
-  globalState.currentMessageLevel = level;
+  pluginState.currentMessage = msg;
+  pluginState.currentMessageLevel = level;
   updateMiniBuffer();
 }
 
-void EmacsModeHandler::Private::selectRange(int beginLine, int endLine)
+void EmacsModeHandler::selectRange(int beginLine, int endLine)
 {
   if (beginLine == -1)
     beginLine = cursorLineInDocument();
@@ -785,13 +661,13 @@ void EmacsModeHandler::Private::selectRange(int beginLine, int endLine)
     setPosition(firstPositionInLine(endLine + 1));
 }
 
-void EmacsModeHandler::Private::indentRegion()
+void EmacsModeHandler::indentRegion()
 {
   int beginLine = lineForPosition(m_tc.anchor());
   indentRegionWithCharacter(firstNonBlankOnLine(beginLine));
 }
 
-void EmacsModeHandler::Private::indentRegionWithCharacter(QChar typedChar)
+void EmacsModeHandler::indentRegionWithCharacter(QChar typedChar)
 {
   //int savedPos = anchor();
   int beginLine = lineForPosition(m_tc.anchor());
@@ -799,59 +675,59 @@ void EmacsModeHandler::Private::indentRegionWithCharacter(QChar typedChar)
   if (beginLine > endLine)
     qSwap(beginLine, endLine);
 
-  emit q->indentRegion(beginLine, endLine, typedChar);
+  emit indentRegionRequested(beginLine, endLine, typedChar);
 }
 
-int EmacsModeHandler::Private::cursorLineInDocument() const
+int EmacsModeHandler::cursorLineInDocument() const
 {
   return m_tc.block().blockNumber();
 }
 
-int EmacsModeHandler::Private::linesInDocument() const
+int EmacsModeHandler::linesInDocument() const
 {
   return m_tc.isNull() ? 0 : m_tc.document()->blockCount();
 }
 
-int EmacsModeHandler::Private::lastPositionInDocument() const
+int EmacsModeHandler::lastPositionInDocument() const
 {
   QTextBlock block = m_tc.document()->lastBlock();
   return block.position() + block.length() - 1;
 }
 
-QString EmacsModeHandler::Private::lineContents(int line) const
+QString EmacsModeHandler::lineContents(int line) const
 {
   return m_tc.document()->findBlockByNumber(line - 1).text();
 }
 
-void EmacsModeHandler::Private::setLineContents(int line, const QString &contents) const
+void EmacsModeHandler::setLineContents(int line, const QString &contents) const
 {
   QTextBlock block = m_tc.document()->findBlockByNumber(line - 1);
   QTextCursor tc = m_tc;
   tc.setPosition(block.position());
-  tc.setPosition(block.position() + block.length() - 1, KeepAnchor);
+  tc.setPosition(block.position() + block.length() - 1, QTextCursor::KeepAnchor);
   tc.removeSelectedText();
   tc.insertText(contents);
 }
 
-int EmacsModeHandler::Private::firstPositionInLine(int line) const
+int EmacsModeHandler::firstPositionInLine(int line) const
 {
   return m_tc.document()->findBlockByNumber(line - 1).position();
 }
 
-int EmacsModeHandler::Private::lastPositionInLine(int line) const
+int EmacsModeHandler::lastPositionInLine(int line) const
 {
   QTextBlock block = m_tc.document()->findBlockByNumber(line - 1);
   return block.position() + block.length() - 1;
 }
 
-int EmacsModeHandler::Private::lineForPosition(int pos) const
+int EmacsModeHandler::lineForPosition(int pos) const
 {
   QTextCursor tc = m_tc;
   tc.setPosition(pos);
   return tc.block().blockNumber() + 1;
 }
 
-void EmacsModeHandler::Private::undo()
+void EmacsModeHandler::undo()
 {
   int current = m_tc.document()->availableUndoSteps();
   int currentPos = -1;
@@ -874,7 +750,7 @@ void EmacsModeHandler::Private::undo()
     m_tc.setPosition(m_undoCursorPosition[rev]);
 */}
 
-void EmacsModeHandler::Private::redo()
+void EmacsModeHandler::redo()
 {
   int current = m_tc.document()->availableUndoSteps();
   //endEditBlock();
@@ -888,83 +764,6 @@ void EmacsModeHandler::Private::redo()
 
   if (m_undoCursorPosition.contains(rev))
     m_tc.setPosition(m_undoCursorPosition[rev]);
-}
-
-///////////////////////////////////////////////////////////////////////
-//
-// EmacsModeHandler
-//
-///////////////////////////////////////////////////////////////////////
-
-EmacsModeHandler::EmacsModeHandler(QWidget *widget, QObject *parent)
-  : QObject(parent), d(new Private(this, widget))
-{}
-
-EmacsModeHandler::~EmacsModeHandler()
-{
-  delete d;
-}
-
-bool EmacsModeHandler::eventFilter(QObject *ob, QEvent *ev)
-{
-  bool active = theEmacsModeSetting(ConfigUseEmacsMode)->value().toBool();
-
-  if (active && ev->type() == QEvent::KeyPress && ob == d->editor()) {
-    QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
-    EventResult res = d->handleEvent(kev);
-    return res == EventHandled;
-  }
-
-  if (active && ev->type() == QEvent::ShortcutOverride && ob == d->editor()) {
-    QKeyEvent *kev = static_cast<QKeyEvent *>(ev);
-    if (d->wantsOverride(kev)) {
-      ev->accept(); // accepting means "don't run the shortcuts"
-      return true;
-    }
-    return true;
-  }
-
-  return QObject::eventFilter(ob, ev);
-}
-
-void EmacsModeHandler::installEventFilter()
-{
-  d->installEventFilter();
-}
-
-void EmacsModeHandler::setupWidget()
-{
-  d->setupWidget();
-}
-
-void EmacsModeHandler::restoreWidget(int tabSize)
-{
-  d->restoreWidget(tabSize);
-}
-
-void EmacsModeHandler::setCurrentFileName(const QString &fileName)
-{
-  d->m_currentFileName = fileName;
-}
-
-void EmacsModeHandler::showMessage(MessageLevel level, const QString &msg)
-{
-  d->showMessage(level, msg);
-}
-
-QWidget *EmacsModeHandler::widget()
-{
-  return d->editor();
-}
-
-void EmacsModeHandler::onContentsChanged(int position, int charsRemoved, int charsAdded)
-{
-  d->onContentsChanged(position, charsRemoved, charsAdded);
-}
-
-void EmacsModeHandler::onUndoCommandAdded()
-{
-  d->onUndoCommandAdded();
 }
 
 } // namespace Internal

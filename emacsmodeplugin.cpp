@@ -204,7 +204,7 @@ void EmacsModePluginPrivate::editorOpened(IEditor *editor)
 
   connect(handler, SIGNAL(commandBufferChanged(QString,int)),
           SLOT(showCommandBuffer(QString, int)));
-  connect(handler, SIGNAL(indentRegion(int,int,QChar)),
+  connect(handler, SIGNAL(indentRegionRequested(int,int,QChar)),
           SLOT(indentRegion(int,int,QChar)));
 
   connect(ICore::instance(), SIGNAL(saveSettingsRequested()),
