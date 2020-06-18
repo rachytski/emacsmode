@@ -15,7 +15,7 @@
 
 #include "emacsmodeplugin.h"
 
-#include "emacsmodeminibuffer.h"
+#include "minibuffer.hpp"
 #include "emacsmodesettings.h"
 #include "emacsmodehandler.h"
 #include "emacsmodeoptionpage.h"
@@ -29,7 +29,6 @@
 #include <coreplugin/icore.h>
 #include <coreplugin/idocument.h>
 #include <coreplugin/id.h>
-#include <coreplugin/statusbarwidget.h>
 #include <coreplugin/statusbarmanager.h>
 
 #include <texteditor/textdocumentlayout.h>
@@ -56,12 +55,14 @@ namespace Internal {
 //
 ///////////////////////////////////////////////////////////////////////
 
+class EmacsModePluginRunData;
+
 class EmacsModePluginPrivate : public QObject
 {
   Q_OBJECT
 
 public:
-  EmacsModePluginPrivate(EmacsModePlugin *);
+  EmacsModePluginPrivate();
   ~EmacsModePluginPrivate();
   friend class EmacsModePlugin;
   friend class EmacsModeExCommandsPage;
@@ -90,26 +91,25 @@ private slots:
 
 private:
   EmacsModePlugin *q;
-  EmacsModeOptionPage *m_emacsModeOptionsPage;
   QHash<IEditor *, EmacsModeHandler *> m_editorToHandler;
 
-  StatusBarWidget *m_statusBar;
+  MiniBuffer *m_miniBuffer = nullptr;
+  EmacsModePluginRunData *m_runData = nullptr;
 };
 
-EmacsModePluginPrivate::EmacsModePluginPrivate(EmacsModePlugin *plugin)
+class EmacsModePluginRunData
 {
-  q = plugin;
-  m_emacsModeOptionsPage = 0;
-  m_statusBar = 0;
+public:
+    EmacsModeOptionPage optionsPage;
+};
+
+EmacsModePluginPrivate::EmacsModePluginPrivate()
+{
+  m_runData = new EmacsModePluginRunData();
 }
 
 EmacsModePluginPrivate::~EmacsModePluginPrivate()
 {
-  q->removeObject(m_emacsModeOptionsPage);
-  delete m_emacsModeOptionsPage;
-  m_emacsModeOptionsPage = 0;
-
-  theEmacsModeSettings()->deleteLater();
 }
 
 void EmacsModePluginPrivate::onCoreAboutToClose()
@@ -121,14 +121,17 @@ void EmacsModePluginPrivate::onCoreAboutToClose()
 
 void EmacsModePluginPrivate::aboutToShutdown()
 {
+    delete m_runData;
+    m_runData = nullptr;
+
+    StatusBarManager::destroyStatusBarWidget(m_miniBuffer);
+    m_miniBuffer = nullptr;
 }
 
 bool EmacsModePluginPrivate::initialize()
 {
+  m_runData = new EmacsModePluginRunData;
   Context globalcontext(Core::Constants::C_GLOBAL);
-
-  m_emacsModeOptionsPage = new EmacsModeOptionPage;
-  q->addObject(m_emacsModeOptionsPage);
 
   readSettings();
 
@@ -278,7 +281,7 @@ void EmacsModePluginPrivate::indentRegion(int beginBlock, int endBlock,
       while (!cursor.atBlockEnd())
         cursor.deleteChar();
     } else {
-      bt->textDocument()->indenter()->indentBlock(doc, block, typedChar, tabSettings);
+      bt->textDocument()->indenter()->indentBlock(block, typedChar, tabSettings);
     }
     block = block.next();
   }
@@ -296,8 +299,8 @@ void EmacsModePluginPrivate::resetCommandBuffer()
 
 void EmacsModePluginPrivate::showCommandBuffer(QString const& contents, int messageLevel)
 {
-  if (MiniBuffer *w = qobject_cast<MiniBuffer *>(m_statusBar->widget()))
-    w->setContents(contents, messageLevel);
+  QTC_ASSERT(m_miniBuffer, return);
+  m_miniBuffer->setContents(contents, messageLevel);
 }
 
 
@@ -308,12 +311,13 @@ void EmacsModePluginPrivate::showCommandBuffer(QString const& contents, int mess
 ///////////////////////////////////////////////////////////////////////
 
 EmacsModePlugin::EmacsModePlugin()
-  : d(new EmacsModePluginPrivate(this))
+  : d(new EmacsModePluginPrivate())
 {}
 
 EmacsModePlugin::~EmacsModePlugin()
 {
   delete d;
+  d = nullptr;
 }
 
 bool EmacsModePlugin::initialize(const QStringList &arguments, QString *errorMessage)
@@ -331,10 +335,8 @@ ExtensionSystem::IPlugin::ShutdownFlag EmacsModePlugin::aboutToShutdown()
 
 void EmacsModePlugin::extensionsInitialized()
 {
-  d->m_statusBar = new StatusBarWidget;
-  d->m_statusBar->setWidget(new MiniBuffer);
-  d->m_statusBar->setPosition(StatusBarWidget::LastLeftAligned);
-  addAutoReleasedObject(d->m_statusBar);
+  d->m_miniBuffer = new MiniBuffer;
+  StatusBarManager::addStatusBarWidget(d->m_miniBuffer, StatusBarManager::LastLeftAligned);
 }
 
 } // namespace Internal
