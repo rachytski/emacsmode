@@ -5,7 +5,7 @@ QT += gui
 SOURCES += emacsmodehandler.cpp \
     emacsmodeplugin.cpp \
     emacsmodesettings.cpp \
-    emacsmodeshortcut.cpp \
+    shortcut.cpp \
     emacsmodeoptionpage.cpp \ 
     minibuffer.cpp \
     pluginstate.cpp \
@@ -14,7 +14,7 @@ SOURCES += emacsmodehandler.cpp \
 HEADERS += emacsmodehandler.h \
     emacsmodeplugin.h \
     emacsmodesettings.h \
-    emacsmodeshortcut.h \
+    shortcut.hpp \
     emacsmodeoptionpage.h \
     minibuffer.hpp \
     pluginstate.hpp \

@@ -13,7 +13,7 @@
 **
 **************************************************************************/
 
-#include "emacsmodeshortcut.h"
+#include "shortcut.hpp"
 #include <QString>
 #include <QStringList>
 

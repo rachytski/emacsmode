@@ -8,7 +8,7 @@ add_qtc_plugin(EmacsMode
     emacsmode.qrc
     emacsmodeplugin.cpp emacsmodeplugin.h
     emacsmodesettings.cpp emacsmodesettings.h
-    emacsmodeshortcut.cpp emacsmodeshortcut.h
+    shortcut.cpp shortcut.hpp
     emacsmodehandler.cpp emacsmodehandler.h
     emacsmodeoptionpage.cpp emacsmodeoptionpage.h
     minibuffer.cpp minibuffer.hpp

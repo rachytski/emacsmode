@@ -16,7 +16,7 @@
 #pragma once
 
 #include "emacsmodesettings.h"
-#include "emacsmodeshortcut.h"
+#include "shortcut.hpp"
 #include "pluginstate.hpp"
 
 #include <QtCore/QObject>
