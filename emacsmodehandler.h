@@ -35,7 +35,7 @@ enum EventResult
   EventPassedToCore
 };
 
-class Range;
+struct Range;
 
 class EmacsModeHandler : public QObject
 {
@@ -60,6 +60,8 @@ public slots:
 
 private:
   bool eventFilter(QObject *ob, QEvent *ev);
+
+  void startNewKillBufferEntryIfNecessary();
 
 public:  
   
@@ -95,21 +97,21 @@ public:
 
   QTextBlock block() const;
 
-  void indentRegion();
+  void indentRegionAction();
   void indentRegionWithCharacter(QChar lastTyped);
 
-  void moveToStartOfLine();
-  void moveToEndOfLine();
-  void moveUp(int n = 1) { m_tc.movePosition(QTextCursor::Up, m_moveMode, n); }
-  void moveDown(int n = 1) { m_tc.movePosition(QTextCursor::Down, m_moveMode, n); }
-  void moveRight(int n = 1) { m_tc.movePosition(QTextCursor::Right, m_moveMode, n); }
-  void moveLeft(int n = 1) { m_tc.movePosition(QTextCursor::Left, m_moveMode, n); }
-  void newLine(){m_tc.insertBlock();}
-  void backspace(){m_tc.deletePreviousChar();}
-  void insertBackSlash(){m_tc.insertText(QString::fromLatin1("\\"));}
-  void insertStraightDelim(){m_tc.insertText(QString::fromLatin1("|"));}
-  void setAnchor(int position) { m_anchor = position; }
-  void setPosition(int position) { m_tc.setPosition(position, QTextCursor::MoveAnchor); }
+  void moveToStartOfLineAction();
+  void moveToEndOfLineAction();
+  void moveUpAction(int n = 1);
+  void moveDownAction(int n = 1);
+  void moveRightAction(int n = 1);
+  void moveLeftAction(int n = 1);
+  void newLineAction();
+  void backspaceAction();
+  void insertBackSlashAction();
+  void insertStraightDelimAction();
+  void setAnchor(int position);
+  void setPosition(int position);
 
   void selectRange(int beginLine, int endLine);
 
@@ -125,12 +127,14 @@ public:
   void updateMiniBuffer();
   //    void updateSelection();
   QWidget *editor() const;
-  void beginEditBlock() { m_tc.beginEditBlock(); }
-  void beginEditBlock(int pos) { setUndoPosition(pos); beginEditBlock(); }
-  void endEditBlock() { m_tc.endEditBlock(); }
-  void joinPreviousEditBlock() { m_tc.joinPreviousEditBlock(); }
+  void beginEditBlock();
+  void beginEditBlock(int pos);
+  void endEditBlock();
+  void joinPreviousEditBlock();
   int cursorLine() const;
   int physicalCursorColumn() const;
+
+  void anchorCurrentPos();
 
 public:
   QTextEdit *m_textedit = nullptr;
@@ -141,50 +145,49 @@ public:
 
   QString m_currentFileName;
 
-  int anchor() const { return m_anchor; }
-  int position() const { return m_tc.position(); }
+  int anchor() const;
+  int position() const;
 
   QString selectText(const Range &range) const;
 
   // undo handling
-  void undo();
-  void redo();
+  void undoAction();
+  void redoAction();
   void setUndoPosition(int pos);
   
   bool m_recordCursorPosition = false;
   QMap<int, int> m_undoCursorPosition; // revision -> position
 
-  QVariant config(int code) const { return theEmacsModeSetting(code)->value(); }
-  bool hasConfig(int code) const { return config(code).toBool(); }
-  bool hasConfig(int code, const char *value) const // FIXME
-  { return config(code).toString().contains(QString::fromLatin1(value)); }
+  QVariant config(int code) const;
+  bool hasConfig(int code) const;
+  bool hasConfig(int code, const char *value) const; // FIXME
 
   typedef std::list<EmacsMode::Shortcut> TShortcutList;
   TShortcutList m_shortcuts;
   TShortcutList m_partialShortcuts;
+  Action::Id lastActionId_ = Action::Id::Null;
 
   QTextCursor::MoveMode m_moveMode = QTextCursor::MoveAnchor;
 
   void setMoveMode(QTextCursor::MoveMode moveMode);
-  void anchorCurrentPos();
-
-  bool m_isAppendingKillBuffer = false;
-  void setKillBufferAppending(bool flag);
+  void startSelectionAction();
 
   void cleanKillRing();
-  void killLine();
-  void killSymbol();
+  void killLineAction();
+  void killSymbolAction();
 
-  void yank();
+  void yankAction();
 
-  void copySelected();
-  void killSelected();
+  void copySelectedAction();
+  void killSelectedAction();
 
   void saveToFile(QString const & fileName);
-  void saveCurrentFile();
+  void saveCurrentFileAction();
 
-  void commentOutRegion();
-  void uncommentRegion();
+  void commentOutRegionAction();
+  void uncommentRegionAction();
+
+  void cancelCurrentCommandAction();
 
   static PluginState pluginState;
 };

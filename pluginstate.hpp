@@ -3,6 +3,8 @@
 #include <QStringList>
 #include <QString>
 
+#include "killring.hpp"
+
 namespace EmacsMode {
 namespace Internal {
 
@@ -28,9 +30,7 @@ struct PluginState
   MessageLevel currentMessageLevel;
   QString currentCommand;
 
-  // Kill ring is shared across all handlers
-  QStringList m_killRing;
-  int maxKillRingSize = 60; // default emacs value
+  KillRing killRing_;
 };
 
 }

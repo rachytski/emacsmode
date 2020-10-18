@@ -11,6 +11,8 @@ add_qtc_plugin(EmacsMode
     shortcut.cpp shortcut.hpp
     emacsmodehandler.cpp emacsmodehandler.h
     emacsmodeoptionpage.cpp emacsmodeoptionpage.h
+    killring.cpp killring.hpp
+    action.cpp action.hpp
     minibuffer.cpp minibuffer.hpp
     pluginstate.cpp pluginstate.hpp
     range.cpp range.hpp

@@ -19,11 +19,13 @@
 
 namespace EmacsMode
 {
-Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> const & keys, fn_list_t const & fnList)
-  : m_mods(mods), m_keys(keys), m_fnList(fnList)
+
+Shortcut::Shortcut(Qt::KeyboardModifiers mods, std::vector<int> keys, Action action)
+  : mods_(mods), keys_(std::move(keys)), action_(action)
 {}
 
-Shortcut::Shortcut(char const * s)
+Shortcut::Shortcut(char const * s, Action action)
+    : action_(std::move(action))
 {
   QStringList l = QString::fromLatin1(s).split(QString::fromLocal8Bit("|"));
   QString keys = l.at(l.size() - 1).toLower();
@@ -32,31 +34,31 @@ Shortcut::Shortcut(char const * s)
   {
     QString key = l.at(i).toUpper();
     if (key == QString::fromLocal8Bit("<CONTROL>"))
-      m_mods |= Qt::ControlModifier;
+      mods_ |= Qt::ControlModifier;
     else if (key == QString::fromLocal8Bit("<META>"))
     {
 #if defined(Q_OS_WIN) || defined(Q_OS_LINUX)
-      m_mods |= Qt::ControlModifier;
+      mods_ |= Qt::ControlModifier;
 #else
-      m_mods |= Qt::MetaModifier;
+      mods_ |= Qt::MetaModifier;
 #endif
     }
     else if (key == QString::fromLocal8Bit("<SHIFT>"))
-      m_mods |= Qt::ShiftModifier;
+      mods_ |= Qt::ShiftModifier;
     else if (key == QString::fromLocal8Bit("<ALT>"))
-      m_mods |= Qt::AltModifier;
+      mods_ |= Qt::AltModifier;
     else if (key == QString::fromLocal8Bit("<TAB>"))
-      m_keys.push_back(Qt::Key_Tab);
+      keys_.push_back(Qt::Key_Tab);
     else if (key == QString::fromLocal8Bit("<SPACE>"))
-      m_keys.push_back(Qt::Key_Space);
+      keys_.push_back(Qt::Key_Space);
     else if (key == QString::fromLocal8Bit("<UNDERSCORE>"))
-      m_keys.push_back(Qt::Key_Underscore);
+      keys_.push_back(Qt::Key_Underscore);
     else if (key == QString::fromLocal8Bit("<ESC>"))
-      m_keys.push_back(Qt::Key_Escape);
+      keys_.push_back(Qt::Key_Escape);
     else if (key == QString::fromLocal8Bit("<SLASH>"))
-      m_keys.push_back(Qt::Key_Slash);
+      keys_.push_back(Qt::Key_Slash);
     else
-      m_keys.push_back(key.at(0).toLatin1() - 'A' + Qt::Key_A);
+      keys_.push_back(key.at(0).toLatin1() - 'A' + Qt::Key_A);
   }
 }
 
@@ -66,19 +68,19 @@ Shortcut::Shortcut()
 
 bool Shortcut::isEmpty() const
 {
-  return m_keys.size() != 0;
+  return keys_.size() != 0;
 }
 
 bool Shortcut::isAccepted(QKeyEvent * kev) const
 {
   int key = kev->key();
   Qt::KeyboardModifiers mods = kev->modifiers();
-  return ((mods == m_mods) && (key == m_keys.front()));
+  return ((mods == mods_) && (key == keys_.front()));
 }
 
 bool Shortcut::hasFollower(QKeyEvent * kev) const
 {
-  return (isAccepted(kev) && (m_keys.size() > 1));
+  return (isAccepted(kev) && (keys_.size() > 1));
 }
 
 Shortcut const Shortcut::getFollower(QKeyEvent * kev) const
@@ -86,22 +88,19 @@ Shortcut const Shortcut::getFollower(QKeyEvent * kev) const
   if (hasFollower(kev))
   {
     std::vector<int> keys;
-    std::copy(++m_keys.begin(), m_keys.end(), std::back_inserter(keys));
-    return Shortcut(m_mods, keys, m_fnList);
+    std::copy(++keys_.begin(), keys_.end(), std::back_inserter(keys));
+    return Shortcut(mods_, std::move(keys), action_);
   }
   return Shortcut();
 }
 
-Shortcut & Shortcut::addFn(std::function<void()> fn)
-{
-  m_fnList.push_back(fn);
-  return *this;
+Action::Id Shortcut::actionId() const {
+  return action_.id();
 }
 
 void Shortcut::exec() const
 {
-  for (fn_list_t::const_iterator it = m_fnList.begin(); it != m_fnList.end(); ++it)
-    (*it)();
+  action_.exec();
 }
 
 }

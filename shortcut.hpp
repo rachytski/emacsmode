@@ -13,42 +13,36 @@
 **
 **************************************************************************/
 
-#ifndef EMACS_SHORTCUT_H
-#define EMACS_SHORTCUT_H
+#pragma once
 
-#include <functional>
-#include <list>
 #include <vector>
 #include <Qt>
 #include <QKeyEvent>
+#include "action.hpp"
 
 namespace EmacsMode
 {
+
 class Shortcut
 {
 private:
 
-  Qt::KeyboardModifiers m_mods;
-  std::vector<int> m_keys;
-
-  typedef std::list<std::function<void()> > fn_list_t;
-  fn_list_t m_fnList;
+  Qt::KeyboardModifiers mods_;
+  std::vector<int> keys_;
+  Action action_;
 
 public:
 
   Shortcut();
-  Shortcut(char const * s);
-  Shortcut(Qt::KeyboardModifiers, std::vector<int> const & , fn_list_t const & );
-
-  Shortcut & addFn(std::function<void()> fn);
+  Shortcut(char const * s, Action action);
+  Shortcut(Qt::KeyboardModifiers, std::vector<int> keys, Action action);
 
   void exec() const;
 
+  Action::Id actionId() const;
   bool isEmpty() const;
   bool isAccepted(QKeyEvent * kev) const;
   bool hasFollower(QKeyEvent * kev) const;
   Shortcut const getFollower(QKeyEvent * kev) const;
 };
 }
-
-#endif // EMACS_SHORTCUT_H
