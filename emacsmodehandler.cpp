@@ -248,7 +248,8 @@ void EmacsModeHandler::init()
   m_shortcuts.push_back(Shortcut("<CONTROL>|<SLASH>", Action(Action::Id::InsertStraightDelim, std::bind(&EmacsModeHandler::insertStraightDelimAction, this))));
   m_shortcuts.push_back(Shortcut("<META>|k", Action(Action::Id::KillLine, std::bind(&EmacsModeHandler::killLineAction, this))));
   m_shortcuts.push_back(Shortcut("<META>|d", Action(Action::Id::KillSymbol, std::bind(&EmacsModeHandler::killSymbolAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|y", Action(Action::Id::Yank, std::bind(&EmacsModeHandler::yankAction, this))));
+  m_shortcuts.push_back(Shortcut("<META>|y", Action(Action::Id::YankCurrent, std::bind(&EmacsModeHandler::yankCurrentAction, this))));
+  m_shortcuts.push_back(Shortcut("<ALT>|y", Action(Action::Id::YankNext, std::bind(&EmacsModeHandler::yankNextAction, this))));
   m_shortcuts.push_back(Shortcut("<META>|x|s", Action(Action::Id::SaveCurrentBuffer, std::bind(&EmacsModeHandler::saveCurrentFileAction, this))));
   m_shortcuts.push_back(Shortcut("<META>|i|c", Action(Action::Id::CommentOutRegion, std::bind(&EmacsModeHandler::commentOutRegionAction, this))));
   m_shortcuts.push_back(Shortcut("<META>|i|u", Action(Action::Id::UncommentRegion, std::bind(&EmacsModeHandler::uncommentRegionAction, this))));
@@ -493,9 +494,26 @@ void EmacsModeHandler::cleanKillRing()
   pluginState.killRing_.clear();
 }
 
-void EmacsModeHandler::yankAction()
+void EmacsModeHandler::yankCurrentAction()
 {
-  m_tc.insertText(pluginState.killRing_.current());
+  if (!pluginState.killRing_.empty()) {
+    startYankPosition_ = m_tc.position();
+    m_tc.insertText(pluginState.killRing_.current());
+    endYankPosition_ = m_tc.position();
+  }
+}
+
+void EmacsModeHandler::yankNextAction() {
+  if ((lastActionId_ == Action::Id::YankCurrent) || ((lastActionId_ == Action::Id::YankNext) && isValidYankChain_)) {
+    m_tc.setPosition(startYankPosition_, QTextCursor::MoveAnchor);
+    m_tc.setPosition(endYankPosition_, QTextCursor::KeepAnchor);
+    m_tc.removeSelectedText();
+    pluginState.killRing_.advance();
+    isValidYankChain_ = true;
+    yankCurrentAction();
+  } else {
+    showMessage(MessageError, EmacsModeHandler::tr("Previous command wasn't yank!"));
+  }
 }
 
 void EmacsModeHandler::killLineAction()

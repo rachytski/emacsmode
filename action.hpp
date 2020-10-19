@@ -27,7 +27,8 @@ public:
     InsertStraightDelim,
     KillLine,
     KillSymbol,
-    Yank,
+    YankCurrent,
+    YankNext,
     SaveCurrentBuffer,
     CommentOutRegion,
     UncommentRegion

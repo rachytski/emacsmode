@@ -6,6 +6,9 @@ KillRing::KillRing(const unsigned maxSize)
 
 void KillRing::push(QString line) {
   killRing_.push_front(std::move(line));
+  while (killRing_.size() > maxSize_) {
+    killRing_.pop_back();
+  }
 }
 
 void KillRing::appendTop(QString line) {
@@ -24,6 +27,10 @@ void KillRing::advance() {
   if (pos_ >= killRing_.size()) {
       pos_ = 0;
   }
+}
+
+bool KillRing::empty() const {
+  return killRing_.empty();
 }
 
 void KillRing::clear() {

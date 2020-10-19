@@ -15,5 +15,6 @@ public:
   QString const& current() const;
   void advance();
   void clear();
+  bool empty() const;
 };
 

@@ -143,6 +143,10 @@ public:
   QTextCursor m_tc;
   int m_anchor = 0;
 
+  int startYankPosition_ = 0;
+  int endYankPosition_ = 0;
+  bool isValidYankChain_ = false;
+
   QString m_currentFileName;
 
   int anchor() const;
@@ -176,7 +180,8 @@ public:
   void killLineAction();
   void killSymbolAction();
 
-  void yankAction();
+  void yankCurrentAction();
+  void yankNextAction();
 
   void copySelectedAction();
   void killSelectedAction();
