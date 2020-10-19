@@ -137,17 +137,17 @@ public:
   void anchorCurrentPos();
 
 public:
-  QTextEdit *m_textedit = nullptr;
-  QPlainTextEdit *m_plaintextedit = nullptr;
+  QTextEdit *textedit_ = nullptr;
+  QPlainTextEdit *plaintextedit_ = nullptr;
 
-  QTextCursor m_tc;
-  int m_anchor = 0;
+  QTextCursor tc_;
+  int anchor_ = 0;
 
   int startYankPosition_ = 0;
   int endYankPosition_ = 0;
   bool isValidYankChain_ = false;
 
-  QString m_currentFileName;
+  QString currentFileName_;
 
   int anchor() const;
   int position() const;
@@ -159,19 +159,19 @@ public:
   void redoAction();
   void setUndoPosition(int pos);
   
-  bool m_recordCursorPosition = false;
-  QMap<int, int> m_undoCursorPosition; // revision -> position
+  bool recordCursorPosition_ = false;
+  QMap<int, int> undoCursorPosition_; // revision -> position
 
   QVariant config(int code) const;
   bool hasConfig(int code) const;
   bool hasConfig(int code, const char *value) const; // FIXME
 
   typedef std::list<EmacsMode::Shortcut> TShortcutList;
-  TShortcutList m_shortcuts;
-  TShortcutList m_partialShortcuts;
+  TShortcutList shortcuts_;
+  TShortcutList partialShortcuts_;
   Action::Id lastActionId_ = Action::Id::Null;
 
-  QTextCursor::MoveMode m_moveMode = QTextCursor::MoveAnchor;
+  QTextCursor::MoveMode moveMode_ = QTextCursor::MoveAnchor;
 
   void setMoveMode(QTextCursor::MoveMode moveMode);
   void startSelectionAction();

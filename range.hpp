@@ -24,9 +24,9 @@ struct Range
   QString toString() const;
   bool isValid() const;
 
-  int beginPos;
-  int endPos;
-  RangeMode rangemode;
+  int beginPos_;
+  int endPos_;
+  RangeMode rangemode_;
 };
 
 QDebug operator<<(QDebug ts, const Range &range);

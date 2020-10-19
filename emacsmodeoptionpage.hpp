@@ -48,9 +48,9 @@ public:
 
 private:
   friend class DebuggerPlugin;
-  QPointer<QWidget> m_widget;
-  Ui::EmacsModeOptionPage m_ui;
-  Utils::SavedActionSet m_group;
+  QPointer<QWidget> widget_;
+  Ui::EmacsModeOptionPage ui_;
+  Utils::SavedActionSet group_;
 };
 
 //const char *EMACSMODE_CONTEXT = "EmacsMode";

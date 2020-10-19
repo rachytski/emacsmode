@@ -37,35 +37,35 @@ EmacsModeOptionPage::EmacsModeOptionPage()
 
 QWidget *EmacsModeOptionPage::widget()
 {
-  if (!m_widget) {
-    m_widget = new QWidget;
-    m_ui.setupUi(m_widget);
+  if (!widget_) {
+    widget_ = new QWidget;
+    ui_.setupUi(widget_);
 
-    m_group.clear();
-    m_group.insert(theEmacsModeSetting(ConfigUseEmacsMode),
-                   m_ui.checkBoxUseEmacsMode);
+    group_.clear();
+    group_.insert(theEmacsModeSetting(ConfigUseEmacsMode),
+                   ui_.checkBoxUseEmacsMode);
 
-    m_group.insert(theEmacsModeSetting(ConfigShiftWidth),
-                   m_ui.spinBoxShiftWidth);
+    group_.insert(theEmacsModeSetting(ConfigShiftWidth),
+                   ui_.spinBoxShiftWidth);
 
-    m_group.insert(theEmacsModeSetting(ConfigTabStop),
-                   m_ui.spinBoxTabStop);
+    group_.insert(theEmacsModeSetting(ConfigTabStop),
+                   ui_.spinBoxTabStop);
 
-    m_group.insert(theEmacsModeSetting(ConfigExpandTab),
-                   m_ui.checkBoxExpandTabs);
+    group_.insert(theEmacsModeSetting(ConfigExpandTab),
+                   ui_.checkBoxExpandTabs);
   }
-  return m_widget;
+  return widget_;
 }
 
 void EmacsModeOptionPage::apply()
 {
-  m_group.apply(ICore::settings());
+  group_.apply(ICore::settings());
 }
 
 void EmacsModeOptionPage::finish()
 {
-  m_group.finish();
-  delete m_widget;
+  group_.finish();
+  delete widget_;
 }
 
 }

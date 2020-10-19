@@ -4,27 +4,27 @@ namespace EmacsMode {
 namespace Internal {
 
 Range::Range()
-  : beginPos(-1), endPos(-1), rangemode(RangeCharMode)
+  : beginPos_(-1), endPos_(-1), rangemode_(RangeCharMode)
 {}
 
 Range::Range(int b, int e, RangeMode m)
-  : beginPos(qMin(b, e)), endPos(qMax(b, e)), rangemode(m)
+  : beginPos_(qMin(b, e)), endPos_(qMax(b, e)), rangemode_(m)
 {}
 
 QString Range::toString() const
 {
-  return QString::fromLatin1("%1-%2 (mode: %3)").arg(beginPos).arg(endPos)
-      .arg(rangemode);
+  return QString::fromLatin1("%1-%2 (mode: %3)").arg(beginPos_).arg(endPos_)
+      .arg(rangemode_);
 }
 
 bool Range::isValid() const
 {
-  return beginPos >= 0 && endPos >= 0;
+  return beginPos_ >= 0 && endPos_ >= 0;
 }
 
 QDebug operator<<(QDebug ts, const Range &range)
 {
-  return ts << '[' << range.beginPos << ',' << range.endPos << ']';
+  return ts << '[' << range.beginPos_ << ',' << range.endPos_ << ']';
 }
 
 }}

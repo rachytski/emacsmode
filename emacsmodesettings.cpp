@@ -50,44 +50,44 @@ EmacsModeSettings::EmacsModeSettings()
 
 EmacsModeSettings::~EmacsModeSettings()
 {
-  qDeleteAll(m_items);
+  qDeleteAll(items_);
 }
 
 void EmacsModeSettings::insertItem(int code, SavedAction *item,
                                    const QString &longName, const QString &shortName)
 {
-  QTC_ASSERT(!m_items.contains(code), qDebug() << code << item->toString(); return);
-  m_items[code] = item;
+  QTC_ASSERT(!items_.contains(code), qDebug() << code << item->toString(); return);
+  items_[code] = item;
   if (!longName.isEmpty()) {
-    m_nameToCode[longName] = code;
-    m_codeToName[code] = longName;
+    nameToCode_[longName] = code;
+    codeToName_[code] = longName;
   }
   if (!shortName.isEmpty()) {
-    m_nameToCode[shortName] = code;
+    nameToCode_[shortName] = code;
   }
 }
 
 void EmacsModeSettings::readSettings(QSettings *settings)
 {
-  foreach (SavedAction *item, m_items)
+  foreach (SavedAction *item, items_)
     item->readSettings(settings);
 }
 
 void EmacsModeSettings::writeSettings(QSettings *settings)
 {
-  foreach (SavedAction *item, m_items)
+  foreach (SavedAction *item, items_)
     item->writeSettings(settings);
 }
 
 SavedAction *EmacsModeSettings::item(int code)
 {
-  QTC_ASSERT(m_items.value(code, 0), qDebug() << "CODE: " << code; return 0);
-  return m_items.value(code, 0);
+  QTC_ASSERT(items_.value(code, 0), qDebug() << "CODE: " << code; return 0);
+  return items_.value(code, 0);
 }
 
 SavedAction *EmacsModeSettings::item(const QString &name)
 {
-  return m_items.value(m_nameToCode.value(name, -1), 0);
+  return items_.value(nameToCode_.value(name, -1), 0);
 }
 
 EmacsModeSettings *theEmacsModeSettings()

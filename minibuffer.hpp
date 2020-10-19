@@ -39,9 +39,9 @@ public:
   QSize sizeHint() const;
 
 private:
-  QLabel *m_label;
-  QTimer m_hideTimer;
-  int m_lastMessageLevel;
+  QLabel *label_;
+  QTimer hideTimer_;
+  int lastMessageLevel_;
 };
 
 }

@@ -33,9 +33,9 @@
 //   Do not pass QTextCursor etc around unless really needed. Convert
 //   early to  line/column.
 //
-//   There is always a "current" cursor (m_tc). A current "region of interest"
-//   spans between m_anchor (== anchor()) and  m_tc.position() (== position())
-//   The value of m_tc.anchor() is not used.
+//   There is always a "current" cursor (tc_). A current "region of interest"
+//   spans between anchor_ (== anchor()) and  tc_.position() (== position())
+//   The value of tc_.anchor() is not used.
 //
 
 #include <utils/qtcassert.h>
@@ -78,7 +78,7 @@ namespace Internal {
 //
 ///////////////////////////////////////////////////////////////////////
 
-#define EDITOR(s) (m_textedit ? m_textedit->s : m_plaintextedit->s)
+#define EDITOR(s) (textedit_ ? textedit_->s : plaintextedit_->s)
 
 const int ParagraphSeparator = 0x00002029;
 
@@ -95,8 +95,8 @@ PluginState EmacsModeHandler::pluginState;
 EmacsModeHandler::EmacsModeHandler(QWidget *widget, QObject *parent)
   : QObject(parent)
 {
-  m_textedit = qobject_cast<QTextEdit *>(widget);
-  m_plaintextedit = qobject_cast<QPlainTextEdit *>(widget);
+  textedit_ = qobject_cast<QTextEdit *>(widget);
+  plaintextedit_ = qobject_cast<QPlainTextEdit *>(widget);
   init();
   
   if (editor()) {
@@ -137,16 +137,16 @@ void EmacsModeHandler::startNewKillBufferEntryIfNecessary() {
 }
 
 bool EmacsModeHandler::atEndOfLine() const {
-  return m_tc.atBlockEnd() && m_tc.block().length() > 1; 
+  return tc_.atBlockEnd() && tc_.block().length() > 1;
 }
 
 QTextBlock EmacsModeHandler::block() const { 
-  return m_tc.block(); 
+  return tc_.block();
 }
 
 void EmacsModeHandler::setCurrentFileName(const QString &fileName)
 {
-  m_currentFileName = fileName;
+  currentFileName_ = fileName;
 }
 
 QWidget *EmacsModeHandler::widget()
@@ -156,13 +156,13 @@ QWidget *EmacsModeHandler::widget()
 
 QWidget *EmacsModeHandler::editor() const
 {
-  return m_textedit
-      ? static_cast<QWidget *>(m_textedit)
-      : static_cast<QWidget *>(m_plaintextedit);
+  return textedit_
+      ? static_cast<QWidget *>(textedit_)
+      : static_cast<QWidget *>(plaintextedit_);
 }
 
 void EmacsModeHandler::beginEditBlock() {
-  m_tc.beginEditBlock();
+  tc_.beginEditBlock();
 }
 
 void EmacsModeHandler::beginEditBlock(int pos) {
@@ -171,19 +171,19 @@ void EmacsModeHandler::beginEditBlock(int pos) {
 }
 
 void EmacsModeHandler::endEditBlock() {
-  m_tc.endEditBlock();
+  tc_.endEditBlock();
 }
 
 void EmacsModeHandler::joinPreviousEditBlock() {
-  m_tc.joinPreviousEditBlock();
+  tc_.joinPreviousEditBlock();
 }
 
 int EmacsModeHandler::anchor() const {
-  return m_anchor;
+  return anchor_;
 }
 
 int EmacsModeHandler::position() const {
-  return m_tc.position();
+  return tc_.position();
 }
 
 QVariant EmacsModeHandler::config(int code) const {
@@ -214,55 +214,55 @@ void EmacsModeHandler::restoreWidget(int tabSize)
 
 void EmacsModeHandler::onContentsChanged(int position, int charsRemoved, int charsAdded)
 {
-  if (m_recordCursorPosition)
+  if (recordCursorPosition_)
   {
     setUndoPosition(position);
-    m_recordCursorPosition = false;
+    recordCursorPosition_ = false;
   }
 }
 
 void EmacsModeHandler::onUndoCommandAdded()
 {
-  m_recordCursorPosition = true;
+  recordCursorPosition_ = true;
 }
 
 void EmacsModeHandler::init()
 {
   cleanKillRing();
 
-  m_shortcuts.push_back(Shortcut("<META>|p", Action(Action::Id::MoveUp, std::bind(&EmacsModeHandler::moveUpAction, this, 1))));
-  m_shortcuts.push_back(Shortcut("<META>|n", Action(Action::Id::MoveDown, std::bind(&EmacsModeHandler::moveDownAction, this, 1))));
-  m_shortcuts.push_back(Shortcut("<META>|f", Action(Action::Id::MoveRight, std::bind(&EmacsModeHandler::moveRightAction, this, 1))));
-  m_shortcuts.push_back(Shortcut("<META>|b", Action(Action::Id::MoveLeft, std::bind(&EmacsModeHandler::moveLeftAction, this, 1))));
-  m_shortcuts.push_back(Shortcut("<META>|m", Action(Action::Id::NewLine, std::bind(&EmacsModeHandler::newLineAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|h", Action(Action::Id::Backspace, std::bind(&EmacsModeHandler::backspaceAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|e", Action(Action::Id::MoveToEndOfLine, std::bind(&EmacsModeHandler::moveToEndOfLineAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|a", Action(Action::Id::MoveToStartOfLine, std::bind(&EmacsModeHandler::moveToStartOfLineAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|<SHIFT>|<UNDERSCORE>", Action(Action::Id::Undo, std::bind(&EmacsModeHandler::undoAction, this))));
-  m_shortcuts.push_back(Shortcut("<TAB>", Action(Action::Id::IndentRegion, std::bind(&EmacsModeHandler::indentRegionAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|<SPACE>", Action(Action::Id::StartSelection, std::bind(&EmacsModeHandler::startSelectionAction, this))));
-  m_shortcuts.push_back(Shortcut("<ESC>|<ESC>", Action(Action::Id::CancelCurrentCommand, std::bind(&EmacsModeHandler::cancelCurrentCommandAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|w", Action(Action::Id::KillSelected, std::bind(&EmacsModeHandler::killSelectedAction, this))));
-  m_shortcuts.push_back(Shortcut("<ALT>|w", Action(Action::Id::CopySelected, std::bind(&EmacsModeHandler::copySelectedAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|<SLASH>", Action(Action::Id::InsertBackSlash, std::bind(&EmacsModeHandler::insertBackSlashAction, this))));
-  m_shortcuts.push_back(Shortcut("<CONTROL>|<SLASH>", Action(Action::Id::InsertStraightDelim, std::bind(&EmacsModeHandler::insertStraightDelimAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|k", Action(Action::Id::KillLine, std::bind(&EmacsModeHandler::killLineAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|d", Action(Action::Id::KillSymbol, std::bind(&EmacsModeHandler::killSymbolAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|y", Action(Action::Id::YankCurrent, std::bind(&EmacsModeHandler::yankCurrentAction, this))));
-  m_shortcuts.push_back(Shortcut("<ALT>|y", Action(Action::Id::YankNext, std::bind(&EmacsModeHandler::yankNextAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|x|s", Action(Action::Id::SaveCurrentBuffer, std::bind(&EmacsModeHandler::saveCurrentFileAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|i|c", Action(Action::Id::CommentOutRegion, std::bind(&EmacsModeHandler::commentOutRegionAction, this))));
-  m_shortcuts.push_back(Shortcut("<META>|i|u", Action(Action::Id::UncommentRegion, std::bind(&EmacsModeHandler::uncommentRegionAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|p", Action(Action::Id::MoveUp, std::bind(&EmacsModeHandler::moveUpAction, this, 1))));
+  shortcuts_.push_back(Shortcut("<META>|n", Action(Action::Id::MoveDown, std::bind(&EmacsModeHandler::moveDownAction, this, 1))));
+  shortcuts_.push_back(Shortcut("<META>|f", Action(Action::Id::MoveRight, std::bind(&EmacsModeHandler::moveRightAction, this, 1))));
+  shortcuts_.push_back(Shortcut("<META>|b", Action(Action::Id::MoveLeft, std::bind(&EmacsModeHandler::moveLeftAction, this, 1))));
+  shortcuts_.push_back(Shortcut("<META>|m", Action(Action::Id::NewLine, std::bind(&EmacsModeHandler::newLineAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|h", Action(Action::Id::Backspace, std::bind(&EmacsModeHandler::backspaceAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|e", Action(Action::Id::MoveToEndOfLine, std::bind(&EmacsModeHandler::moveToEndOfLineAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|a", Action(Action::Id::MoveToStartOfLine, std::bind(&EmacsModeHandler::moveToStartOfLineAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|<SHIFT>|<UNDERSCORE>", Action(Action::Id::Undo, std::bind(&EmacsModeHandler::undoAction, this))));
+  shortcuts_.push_back(Shortcut("<TAB>", Action(Action::Id::IndentRegion, std::bind(&EmacsModeHandler::indentRegionAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|<SPACE>", Action(Action::Id::StartSelection, std::bind(&EmacsModeHandler::startSelectionAction, this))));
+  shortcuts_.push_back(Shortcut("<ESC>|<ESC>", Action(Action::Id::CancelCurrentCommand, std::bind(&EmacsModeHandler::cancelCurrentCommandAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|w", Action(Action::Id::KillSelected, std::bind(&EmacsModeHandler::killSelectedAction, this))));
+  shortcuts_.push_back(Shortcut("<ALT>|w", Action(Action::Id::CopySelected, std::bind(&EmacsModeHandler::copySelectedAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|<SLASH>", Action(Action::Id::InsertBackSlash, std::bind(&EmacsModeHandler::insertBackSlashAction, this))));
+  shortcuts_.push_back(Shortcut("<CONTROL>|<SLASH>", Action(Action::Id::InsertStraightDelim, std::bind(&EmacsModeHandler::insertStraightDelimAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|k", Action(Action::Id::KillLine, std::bind(&EmacsModeHandler::killLineAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|d", Action(Action::Id::KillSymbol, std::bind(&EmacsModeHandler::killSymbolAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|y", Action(Action::Id::YankCurrent, std::bind(&EmacsModeHandler::yankCurrentAction, this))));
+  shortcuts_.push_back(Shortcut("<ALT>|y", Action(Action::Id::YankNext, std::bind(&EmacsModeHandler::yankNextAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|x|s", Action(Action::Id::SaveCurrentBuffer, std::bind(&EmacsModeHandler::saveCurrentFileAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|i|c", Action(Action::Id::CommentOutRegion, std::bind(&EmacsModeHandler::commentOutRegionAction, this))));
+  shortcuts_.push_back(Shortcut("<META>|i|u", Action(Action::Id::UncommentRegion, std::bind(&EmacsModeHandler::uncommentRegionAction, this))));
 }
 
 void EmacsModeHandler::saveCurrentFileAction()
 {
-  saveToFile(m_currentFileName);
+  saveToFile(currentFileName_);
 }
 
 void EmacsModeHandler::moveToFirstNonBlankOnLine()
 {
-  moveToFirstNonBlankOnLine(&m_tc);
+  moveToFirstNonBlankOnLine(&tc_);
 }
 
 void EmacsModeHandler::moveToFirstNonBlankOnLine(QTextCursor *tc)
@@ -296,10 +296,10 @@ QChar const EmacsModeHandler::firstNonBlankOnLine(int line)
 
 void EmacsModeHandler::commentOutRegionAction()
 {
-  int beginLine = lineForPosition(m_tc.anchor());
-  int endLine = lineForPosition(m_tc.position());
+  int beginLine = lineForPosition(tc_.anchor());
+  int endLine = lineForPosition(tc_.position());
 
-  if (m_tc.atBlockStart() && m_tc.atBlockEnd())
+  if (tc_.atBlockStart() && tc_.atBlockEnd())
     if (beginLine > endLine)
       ++endLine;
     else
@@ -315,7 +315,7 @@ void EmacsModeHandler::commentOutRegionAction()
 
   for (int line = beginLine; line <= endLine; ++line) {
     setPosition(firstPositionInLine(line));
-    m_tc.insertText(QString::fromLatin1("//"));
+    tc_.insertText(QString::fromLatin1("//"));
   }
   endEditBlock();
 
@@ -325,10 +325,10 @@ void EmacsModeHandler::commentOutRegionAction()
 
 void EmacsModeHandler::uncommentRegionAction()
 {
-  int beginLine = lineForPosition(m_tc.anchor());
-  int endLine = lineForPosition(m_tc.position());
+  int beginLine = lineForPosition(tc_.anchor());
+  int endLine = lineForPosition(tc_.position());
 
-  if (m_tc.atBlockStart() && m_tc.atBlockEnd())
+  if (tc_.atBlockStart() && tc_.atBlockEnd())
     if (beginLine > endLine)
       ++endLine;
     else
@@ -345,8 +345,8 @@ void EmacsModeHandler::uncommentRegionAction()
 
   for (int line = beginLine; line <= endLine; ++line) {
     setPosition(firstPositionInLine(line));
-    m_tc.deleteChar();
-    m_tc.deleteChar();
+    tc_.deleteChar();
+    tc_.deleteChar();
   }
   endEditBlock();
 
@@ -368,16 +368,16 @@ int EmacsModeHandler::lineNumber(const QTextBlock &block) const
 
 QString EmacsModeHandler::selectText(const Range &range) const
 {
-  if (range.rangemode == RangeCharMode) {
+  if (range.rangemode_ == RangeCharMode) {
     QTextCursor tc(document());
-    tc.setPosition(range.beginPos, QTextCursor::MoveAnchor);
-    tc.setPosition(range.endPos, QTextCursor::KeepAnchor);
+    tc.setPosition(range.beginPos_, QTextCursor::MoveAnchor);
+    tc.setPosition(range.endPos_, QTextCursor::KeepAnchor);
     return tc.selection().toPlainText();
   }
-  if (range.rangemode == RangeLineMode) {
+  if (range.rangemode_ == RangeLineMode) {
     QTextCursor tc(document());
-    int firstPos = firstPositionInLine(lineForPosition(range.beginPos));
-    int lastLine = lineForPosition(range.endPos);
+    int firstPos = firstPositionInLine(lineForPosition(range.beginPos_));
+    int lastLine = lineForPosition(range.endPos_);
     int lastDocumentLine = document()->blockCount();
     bool endOfDoc = lastLine == lastDocumentLine;
     int lastPos = endOfDoc ? lastPositionInDocument() : firstPositionInLine(lastLine + 1);
@@ -387,13 +387,13 @@ QString EmacsModeHandler::selectText(const Range &range) const
     return contents;// + QLatin1String(endOfDoc ? "\n" : "");
   }
   // FIXME: Performance?
-  int beginLine = lineForPosition(range.beginPos);
-  int endLine = lineForPosition(range.endPos);
+  int beginLine = lineForPosition(range.beginPos_);
+  int endLine = lineForPosition(range.endPos_);
   int beginColumn = 0;
   int endColumn = INT_MAX;
-  if (range.rangemode == RangeBlockMode) {
-    int column1 = range.beginPos - firstPositionInLine(beginLine);
-    int column2 = range.endPos - firstPositionInLine(endLine);
+  if (range.rangemode_ == RangeBlockMode) {
+    int column1 = range.beginPos_ - firstPositionInLine(beginLine);
+    int column2 = range.endPos_ - firstPositionInLine(endLine);
     beginColumn = qMin(column1, column2);
     endColumn = qMax(column1, column2);
   }
@@ -402,7 +402,7 @@ QString EmacsModeHandler::selectText(const Range &range) const
   QTextBlock block = document()->findBlockByNumber(beginLine - 1);
   for (int i = beginLine; i <= endLine && block.isValid(); ++i) {
     QString line = block.text();
-    if (range.rangemode == RangeBlockMode) {
+    if (range.rangemode_ == RangeBlockMode) {
       line = line.mid(beginColumn, len);
       if (line.size() < len)
         line += QString(len - line.size(), QLatin1Char(' '));
@@ -425,11 +425,11 @@ void EmacsModeHandler::saveToFile(QString const & fileName)
   if (file1.open(QIODevice::ReadWrite))
   {
     file1.close();
-    QTextCursor tc = m_tc;
+    QTextCursor tc = tc_;
     Range range(firstPositionInLine(beginLine),
                 firstPositionInLine(endLine), RangeLineMode);
     QString contents = selectText(range);
-    m_tc = tc;
+    tc_ = tc;
     bool handled = false;
     emit writeFileRequested(&handled, fileName, contents);
     // nobody cared, so act ourselves
@@ -464,7 +464,7 @@ void EmacsModeHandler::saveToFile(QString const & fileName)
 void EmacsModeHandler::copySelectedAction()
 {
   pluginState.killRing_.push("");
-  pluginState.killRing_.appendTop(m_tc.selectedText());
+  pluginState.killRing_.appendTop(tc_.selectedText());
   anchorCurrentPos();
   setMoveMode(QTextCursor::MoveAnchor);
 }
@@ -472,8 +472,8 @@ void EmacsModeHandler::copySelectedAction()
 void EmacsModeHandler::killSelectedAction()
 {
   startNewKillBufferEntryIfNecessary();
-  pluginState.killRing_.appendTop(m_tc.selectedText());
-  m_tc.removeSelectedText();
+  pluginState.killRing_.appendTop(tc_.selectedText());
+  tc_.removeSelectedText();
   anchorCurrentPos();
   setMoveMode(QTextCursor::MoveAnchor);
 }
@@ -482,11 +482,11 @@ void EmacsModeHandler::killSymbolAction()
 {
   startNewKillBufferEntryIfNecessary();
 
-  m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
-  m_tc.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
-  pluginState.killRing_.appendTop(m_tc.selectedText());
+  tc_.setPosition(tc_.position(), QTextCursor::MoveAnchor);
+  tc_.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+  pluginState.killRing_.appendTop(tc_.selectedText());
 
-  m_tc.removeSelectedText();
+  tc_.removeSelectedText();
 }
 
 void EmacsModeHandler::cleanKillRing()
@@ -497,17 +497,17 @@ void EmacsModeHandler::cleanKillRing()
 void EmacsModeHandler::yankCurrentAction()
 {
   if (!pluginState.killRing_.empty()) {
-    startYankPosition_ = m_tc.position();
-    m_tc.insertText(pluginState.killRing_.current());
-    endYankPosition_ = m_tc.position();
+    startYankPosition_ = tc_.position();
+    tc_.insertText(pluginState.killRing_.current());
+    endYankPosition_ = tc_.position();
   }
 }
 
 void EmacsModeHandler::yankNextAction() {
   if ((lastActionId_ == Action::Id::YankCurrent) || ((lastActionId_ == Action::Id::YankNext) && isValidYankChain_)) {
-    m_tc.setPosition(startYankPosition_, QTextCursor::MoveAnchor);
-    m_tc.setPosition(endYankPosition_, QTextCursor::KeepAnchor);
-    m_tc.removeSelectedText();
+    tc_.setPosition(startYankPosition_, QTextCursor::MoveAnchor);
+    tc_.setPosition(endYankPosition_, QTextCursor::KeepAnchor);
+    tc_.removeSelectedText();
     pluginState.killRing_.advance();
     isValidYankChain_ = true;
     yankCurrentAction();
@@ -519,26 +519,26 @@ void EmacsModeHandler::yankNextAction() {
 void EmacsModeHandler::killLineAction()
 {
   startNewKillBufferEntryIfNecessary();
-  bool isEndOfLine = (atEndOfLine() || (m_tc.block().length() == 1));
+  bool isEndOfLine = (atEndOfLine() || (tc_.block().length() == 1));
 
   if (!isEndOfLine)
   {
-    m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
-    m_tc.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
-    pluginState.killRing_.appendTop(m_tc.selectedText());
+    tc_.setPosition(tc_.position(), QTextCursor::MoveAnchor);
+    tc_.movePosition(QTextCursor::EndOfLine, QTextCursor::KeepAnchor);
+    pluginState.killRing_.appendTop(tc_.selectedText());
   }
   else
   {
-    m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
-    m_tc.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
-    pluginState.killRing_.appendTop(m_tc.selectedText());
+    tc_.setPosition(tc_.position(), QTextCursor::MoveAnchor);
+    tc_.movePosition(QTextCursor::NextCharacter, QTextCursor::KeepAnchor);
+    pluginState.killRing_.appendTop(tc_.selectedText());
   }
-  m_tc.removeSelectedText();
+  tc_.removeSelectedText();
 }
 
 void EmacsModeHandler::setMoveMode(QTextCursor::MoveMode moveMode)
 {
-  m_moveMode = moveMode;
+  moveMode_ = moveMode;
 }
 
 void EmacsModeHandler::startSelectionAction() {
@@ -554,12 +554,12 @@ void EmacsModeHandler::cancelCurrentCommandAction() {
 
 void EmacsModeHandler::anchorCurrentPos()
 {
-  m_tc.setPosition(m_tc.position(), QTextCursor::MoveAnchor);
+  tc_.setPosition(tc_.position(), QTextCursor::MoveAnchor);
 }
 
 bool EmacsModeHandler::wantsOverride(QKeyEvent *ev)
 {
-  TShortcutList shortcuts = m_partialShortcuts.empty() ? m_shortcuts : m_partialShortcuts;
+  TShortcutList shortcuts = partialShortcuts_.empty() ? shortcuts_ : partialShortcuts_;
   for (TShortcutList::const_iterator it = shortcuts.begin(); it != shortcuts.end(); ++it)
     if (it->isAccepted(ev))
       return true;
@@ -568,15 +568,15 @@ bool EmacsModeHandler::wantsOverride(QKeyEvent *ev)
 
 EventResult EmacsModeHandler::handleEvent(QKeyEvent *ev)
 {
-  m_tc = EDITOR(textCursor());
-  if (m_partialShortcuts.empty())
-    m_partialShortcuts = m_shortcuts;
+  tc_ = EDITOR(textCursor());
+  if (partialShortcuts_.empty())
+    partialShortcuts_ = shortcuts_;
 
   TShortcutList newPartialShortcuts;
   bool executed = false;
   bool isAccepted = false;
 
-  for (TShortcutList::const_iterator it = m_partialShortcuts.begin(); it != m_partialShortcuts.end(); ++it)
+  for (TShortcutList::const_iterator it = partialShortcuts_.begin(); it != partialShortcuts_.end(); ++it)
   {
     if (it->isAccepted(ev))
     {
@@ -588,16 +588,16 @@ EventResult EmacsModeHandler::handleEvent(QKeyEvent *ev)
         it->exec();
         lastActionId_ = it->actionId();
         executed = true;
-        m_partialShortcuts.clear();
+        partialShortcuts_.clear();
         break;
       }
     }
   }
 
   if (!executed)
-    m_partialShortcuts = newPartialShortcuts;
+    partialShortcuts_ = newPartialShortcuts;
 
-  EDITOR(setTextCursor(m_tc));
+  EDITOR(setTextCursor(tc_));
 
   return isAccepted ? EventHandled : EventPassedToCore;
 }
@@ -609,33 +609,33 @@ void EmacsModeHandler::installEventFilter()
 
 void EmacsModeHandler::setUndoPosition(int pos)
 {
-  m_undoCursorPosition[m_tc.document()->availableUndoSteps()] = pos;
+  undoCursorPosition_[tc_.document()->availableUndoSteps()] = pos;
 }
 
 void EmacsModeHandler::moveToEndOfLineAction()
 {
   // does not work for "hidden" documents like in the autotests
-  m_tc.movePosition(QTextCursor::EndOfLine, m_moveMode);
+  tc_.movePosition(QTextCursor::EndOfLine, moveMode_);
 }
 
 void EmacsModeHandler::moveToStartOfLineAction()
 {
   // does not work for "hidden" documents like in the autotests
-  m_tc.movePosition(QTextCursor::StartOfLine, m_moveMode);
+  tc_.movePosition(QTextCursor::StartOfLine, moveMode_);
 }
 
 void EmacsModeHandler::updateMiniBuffer()
 {
-  if (!m_textedit && !m_plaintextedit)
+  if (!textedit_ && !plaintextedit_)
     return;
 
   QString msg;
   MessageLevel messageLevel = MessageInfo;
 
-  if (!pluginState.currentMessage.isEmpty()) {
-    msg = pluginState.currentMessage;
-    pluginState.currentMessage.clear();
-    messageLevel = pluginState.currentMessageLevel;
+  if (!pluginState.currentMessage_.isEmpty()) {
+    msg = pluginState.currentMessage_;
+    pluginState.currentMessage_.clear();
+    messageLevel = pluginState.currentMessageLevel_;
   }
 
   emit commandBufferChanged(msg, messageLevel);
@@ -653,49 +653,49 @@ int EmacsModeHandler::physicalCursorColumn() const
 
 void EmacsModeHandler::showMessage(MessageLevel level, const QString &msg)
 {
-  pluginState.currentMessage = msg;
-  pluginState.currentMessageLevel = level;
+  pluginState.currentMessage_ = msg;
+  pluginState.currentMessageLevel_ = level;
   updateMiniBuffer();
 }
 
 void EmacsModeHandler::moveUpAction(int n) {
-  m_tc.movePosition(QTextCursor::Up, m_moveMode, n);
+  tc_.movePosition(QTextCursor::Up, moveMode_, n);
 }
 
 void EmacsModeHandler::moveDownAction(int n) {
-  m_tc.movePosition(QTextCursor::Down, m_moveMode, n);
+  tc_.movePosition(QTextCursor::Down, moveMode_, n);
 }
 
 void EmacsModeHandler::moveRightAction(int n) {
-  m_tc.movePosition(QTextCursor::Right, m_moveMode, n);
+  tc_.movePosition(QTextCursor::Right, moveMode_, n);
 }
 
 void EmacsModeHandler::moveLeftAction(int n) {
-  m_tc.movePosition(QTextCursor::Left, m_moveMode, n);
+  tc_.movePosition(QTextCursor::Left, moveMode_, n);
 }
 
 void EmacsModeHandler::newLineAction() {
-  m_tc.insertBlock();
+  tc_.insertBlock();
 }
 
 void EmacsModeHandler::backspaceAction() {
-  m_tc.deletePreviousChar();
+  tc_.deletePreviousChar();
 }
 
 void EmacsModeHandler::insertBackSlashAction() {
-  m_tc.insertText(QString::fromLatin1("\\"));
+  tc_.insertText(QString::fromLatin1("\\"));
 }
 
 void EmacsModeHandler::insertStraightDelimAction() {
-  m_tc.insertText(QString::fromLatin1("|"));
+  tc_.insertText(QString::fromLatin1("|"));
 }
 
 void EmacsModeHandler::setAnchor(int position) {
-  m_anchor = position;
+  anchor_ = position;
 }
 
 void EmacsModeHandler::setPosition(int position) {
-  m_tc.setPosition(position, QTextCursor::MoveAnchor);
+  tc_.setPosition(position, QTextCursor::MoveAnchor);
 }
 
 
@@ -716,15 +716,15 @@ void EmacsModeHandler::selectRange(int beginLine, int endLine)
 
 void EmacsModeHandler::indentRegionAction()
 {
-  int beginLine = lineForPosition(m_tc.anchor());
+  int beginLine = lineForPosition(tc_.anchor());
   indentRegionWithCharacter(firstNonBlankOnLine(beginLine));
 }
 
 void EmacsModeHandler::indentRegionWithCharacter(QChar typedChar)
 {
   //int savedPos = anchor();
-  int beginLine = lineForPosition(m_tc.anchor());
-  int endLine = lineForPosition(m_tc.position());
+  int beginLine = lineForPosition(tc_.anchor());
+  int endLine = lineForPosition(tc_.position());
   if (beginLine > endLine)
     qSwap(beginLine, endLine);
 
@@ -733,29 +733,29 @@ void EmacsModeHandler::indentRegionWithCharacter(QChar typedChar)
 
 int EmacsModeHandler::cursorLineInDocument() const
 {
-  return m_tc.block().blockNumber();
+  return tc_.block().blockNumber();
 }
 
 int EmacsModeHandler::linesInDocument() const
 {
-  return m_tc.isNull() ? 0 : m_tc.document()->blockCount();
+  return tc_.isNull() ? 0 : tc_.document()->blockCount();
 }
 
 int EmacsModeHandler::lastPositionInDocument() const
 {
-  QTextBlock block = m_tc.document()->lastBlock();
+  QTextBlock block = tc_.document()->lastBlock();
   return block.position() + block.length() - 1;
 }
 
 QString EmacsModeHandler::lineContents(int line) const
 {
-  return m_tc.document()->findBlockByNumber(line - 1).text();
+  return tc_.document()->findBlockByNumber(line - 1).text();
 }
 
 void EmacsModeHandler::setLineContents(int line, const QString &contents) const
 {
-  QTextBlock block = m_tc.document()->findBlockByNumber(line - 1);
-  QTextCursor tc = m_tc;
+  QTextBlock block = tc_.document()->findBlockByNumber(line - 1);
+  QTextCursor tc = tc_;
   tc.setPosition(block.position());
   tc.setPosition(block.position() + block.length() - 1, QTextCursor::KeepAnchor);
   tc.removeSelectedText();
@@ -764,59 +764,59 @@ void EmacsModeHandler::setLineContents(int line, const QString &contents) const
 
 int EmacsModeHandler::firstPositionInLine(int line) const
 {
-  return m_tc.document()->findBlockByNumber(line - 1).position();
+  return tc_.document()->findBlockByNumber(line - 1).position();
 }
 
 int EmacsModeHandler::lastPositionInLine(int line) const
 {
-  QTextBlock block = m_tc.document()->findBlockByNumber(line - 1);
+  QTextBlock block = tc_.document()->findBlockByNumber(line - 1);
   return block.position() + block.length() - 1;
 }
 
 int EmacsModeHandler::lineForPosition(int pos) const
 {
-  QTextCursor tc = m_tc;
+  QTextCursor tc = tc_;
   tc.setPosition(pos);
   return tc.block().blockNumber() + 1;
 }
 
 void EmacsModeHandler::undoAction()
 {
-  int current = m_tc.document()->availableUndoSteps();
+  int current = tc_.document()->availableUndoSteps();
   int currentPos = -1;
-  if (m_undoCursorPosition.contains(current))
-    currentPos = m_undoCursorPosition[current];
+  if (undoCursorPosition_.contains(current))
+    currentPos = undoCursorPosition_[current];
 
   EDITOR(undo());
 
   if (currentPos != -1)
-    m_tc.setPosition(currentPos);
+    tc_.setPosition(currentPos);
 
-  int rev = m_tc.document()->availableUndoSteps();
+  int rev = tc_.document()->availableUndoSteps();
   if (current == rev)
     showMessage(MessageInfo, EmacsModeHandler::tr("Already at oldest change"));
   else
     showMessage(MessageInfo, QString());
 
   /*
-  if (m_undoCursorPosition.contains(rev))
-    m_tc.setPosition(m_undoCursorPosition[rev]);
+  if (undoCursorPosition_.contains(rev))
+    tc_.setPosition(undoCursorPosition_[rev]);
 */}
 
 void EmacsModeHandler::redoAction()
 {
-  int current = m_tc.document()->availableUndoSteps();
+  int current = tc_.document()->availableUndoSteps();
   //endEditBlock();
   EDITOR(redo());
   //beginEditBlock();
-  int rev = m_tc.document()->availableUndoSteps();
+  int rev = tc_.document()->availableUndoSteps();
   if (rev == current)
     showMessage(MessageInfo, EmacsModeHandler::tr("Already at newest change"));
   else
     showMessage(MessageInfo, QString());
 
-  if (m_undoCursorPosition.contains(rev))
-    m_tc.setPosition(m_undoCursorPosition[rev]);
+  if (undoCursorPosition_.contains(rev))
+    tc_.setPosition(undoCursorPosition_[rev]);
 }
 
 } // namespace Internal

@@ -22,30 +22,30 @@ namespace EmacsMode{
 namespace Internal {
 
 MiniBuffer::MiniBuffer()
-  : m_label(new QLabel(this))
-  , m_lastMessageLevel(MessageInfo)
+  : label_(new QLabel(this))
+  , lastMessageLevel_(MessageInfo)
 {
-  m_label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+  label_->setTextInteractionFlags(Qt::TextSelectableByMouse);
 
-  addWidget(m_label);
+  addWidget(label_);
 
-  m_hideTimer.setSingleShot(true);
-  m_hideTimer.setInterval(8000);
-  connect(&m_hideTimer, SIGNAL(timeout()), SLOT(hide()));
+  hideTimer_.setSingleShot(true);
+  hideTimer_.setInterval(8000);
+  connect(&hideTimer_, SIGNAL(timeout()), SLOT(hide()));
 }
 
 void MiniBuffer::setContents(const QString &contents, int messageLevel)
 {
   if (contents.isEmpty())
   {
-    m_hideTimer.start();
+    hideTimer_.start();
   }
   else
   {
-    m_hideTimer.stop();
+    hideTimer_.stop();
     show();
 
-    m_label->setText(contents);
+    label_->setText(contents);
 
     QString css;
     if (messageLevel == MessageError)
@@ -59,13 +59,13 @@ void MiniBuffer::setContents(const QString &contents, int messageLevel)
       css = QLatin1String("border:1px solid rgba(255,255,255,120);"
                           "background-color:rgba(100,255,100,30);");
     }
-    m_label->setStyleSheet(QString::fromLatin1(
+    label_->setStyleSheet(QString::fromLatin1(
                              "*{border-radius:2px;padding-left:4px;padding-right:4px;%1}").arg(css));
   }
 
-  setCurrentWidget(m_label);
+  setCurrentWidget(label_);
 
-  m_lastMessageLevel = messageLevel;
+  lastMessageLevel_ = messageLevel;
 }
 
 QSize MiniBuffer::sizeHint() const

@@ -21,14 +21,14 @@ enum MessageLevel
 struct PluginState
 {
   PluginState()
-    : currentMessageLevel(MessageInfo)
+    : currentMessageLevel_(MessageInfo)
   {
   }
 
   // Current mini buffer message.
-  QString currentMessage;
-  MessageLevel currentMessageLevel;
-  QString currentCommand;
+  QString currentMessage_;
+  MessageLevel currentMessageLevel_;
+  QString currentCommand_;
 
   KillRing killRing_;
 };
