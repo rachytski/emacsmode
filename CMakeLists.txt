@@ -6,11 +6,11 @@ add_qtc_plugin(EmacsMode
   PLUGIN_DEPENDS Core TextEditor ${TST_COMPONENT}
   SOURCES ${TEST_SOURCES}
     emacsmode.qrc
-    emacsmodeplugin.cpp emacsmodeplugin.h
-    emacsmodesettings.cpp emacsmodesettings.h
+    emacsmodeplugin.cpp emacsmodeplugin.hpp
+    emacsmodesettings.cpp emacsmodesettings.hpp
     shortcut.cpp shortcut.hpp
-    emacsmodehandler.cpp emacsmodehandler.h
-    emacsmodeoptionpage.cpp emacsmodeoptionpage.h
+    emacsmodehandler.cpp emacsmodehandler.hpp
+    emacsmodeoptionpage.cpp emacsmodeoptionpage.hpp
     killring.cpp killring.hpp
     action.cpp action.hpp
     minibuffer.cpp minibuffer.hpp

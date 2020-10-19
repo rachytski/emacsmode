@@ -18,7 +18,7 @@
 #include <QStackedWidget>
 #include <QTimer>
 
-#include "emacsmodehandler.h"
+#include "emacsmodehandler.hpp"
 
 class QLabel;
 class QLineEdit;

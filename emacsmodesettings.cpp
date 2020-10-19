@@ -13,7 +13,7 @@
 **
 **************************************************************************/
 
-#include "emacsmodesettings.h"
+#include "emacsmodesettings.hpp"
 
 // Please do not add any direct dependencies to other Qt Creator code  here. 
 // Instead emit signals and let the EmacsModePlugin channel the information to

@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "emacsmodesettings.h"
+#include "emacsmodesettings.hpp"
 #include "shortcut.hpp"
 #include "pluginstate.hpp"
 

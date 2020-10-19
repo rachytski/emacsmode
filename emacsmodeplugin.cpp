@@ -13,12 +13,12 @@
 **
 **************************************************************************/
 
-#include "emacsmodeplugin.h"
+#include "emacsmodeplugin.hpp"
 
 #include "minibuffer.hpp"
-#include "emacsmodesettings.h"
-#include "emacsmodehandler.h"
-#include "emacsmodeoptionpage.h"
+#include "emacsmodesettings.hpp"
+#include "emacsmodehandler.hpp"
+#include "emacsmodeoptionpage.hpp"
 #include "ui_emacsmodeoptions.h"
 
 #include <coreplugin/coreconstants.h>

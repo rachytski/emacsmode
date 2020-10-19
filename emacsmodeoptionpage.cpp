@@ -13,7 +13,7 @@
 **
 **************************************************************************/
 
-#include "emacsmodeoptionpage.h"
+#include "emacsmodeoptionpage.hpp"
 
 #include <coreplugin/icore.h>
 

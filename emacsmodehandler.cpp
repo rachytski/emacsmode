@@ -13,7 +13,7 @@
 **
 **************************************************************************/
 
-#include "emacsmodehandler.h"
+#include "emacsmodehandler.hpp"
 #include <functional>
 
 //
